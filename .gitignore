@@ -1,0 +1,14 @@
+node_modules/
+server/.env
+server/node_modules/
+*.apk
+.env
+.env.*
+.vercel
+.idea/
+*.iml
+.DS_Store
+android/app/build/
+/tmp/
+*.log
+.claude/

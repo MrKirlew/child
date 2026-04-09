@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<title>KiddoAI Tutor</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#0D0B2A;--card:#16123E;--card2:#1F1A52;--card3:#2A2468;
+  --purple:#A78BFA;--p2:#7C3AED;--p3:#5B21B6;
+  --gold:#FFD93D;--teal:#2DD4BF;--coral:#FF6B6B;
+  --green:#4ADE80;--blue:#60A5FA;--pink:#F472B6;--orange:#FB923C;--red:#F87171;
+  --text:#F0EEFF;--muted:#8B7EC8;--border:rgba(167,139,250,0.18);
+  --ok:#4ADE80;--ng:#F87171;
+}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:'Nunito',sans-serif}
+#app{height:100vh;display:flex;flex-direction:column;overflow:hidden;max-width:520px;margin:0 auto}
+
+/* HDR */
+#hdr{height:52px;display:flex;align-items:center;justify-content:space-between;padding:0 14px;flex-shrink:0;border-bottom:1px solid var(--border)}
+#hdr h1{font-family:'Fredoka One',cursive;font-size:1.35rem;color:var(--purple)}
+.hdr-r{display:flex;gap:8px}
+.hpill{background:var(--card2);border:1.5px solid var(--border);border-radius:20px;padding:4px 10px;font-weight:800;font-size:12px;color:var(--purple);cursor:pointer}
+.hico{background:none;border:1.5px solid var(--border);border-radius:10px;width:34px;height:34px;cursor:pointer;font-size:16px;color:var(--text);display:flex;align-items:center;justify-content:center}
+
+
+/* TABS */
+#tabs{flex:1;overflow:hidden;min-height:0;position:relative}
+.tc{display:none;height:100%;flex-direction:column;overflow:hidden}
+.tc.on{display:flex}
+
+/* ── LEARN TAB ── */
+#viz-card{margin:8px 12px 5px;border-radius:22px;background:var(--card);border:1.5px solid var(--border);padding:14px 14px 10px;flex-shrink:0;position:relative;overflow:hidden}
+#viz-card::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 0,rgba(124,58,237,.18) 0,transparent 70%);pointer-events:none}
+#vt{display:flex;align-items:center;gap:12px}
+#oz{position:relative;flex-shrink:0;width:82px;height:88px}
+#lr{position:absolute;inset:-8px;border-radius:50%;border:3px solid transparent;pointer-events:none}
+#lr.ww{border-color:var(--teal);animation:rp 1.6s ease-in-out infinite}
+#lr.spk{border-color:var(--purple);animation:rp .45s ease-in-out infinite}
+@keyframes rp{0%,100%{transform:scale(1);opacity:.9}50%{transform:scale(1.14);opacity:.3}}
+#osv{width:82px;height:88px;filter:drop-shadow(0 0 12px rgba(167,139,250,.3))}
+.owl-t #osv{animation:owt .4s ease-in-out infinite alternate}
+.owl-i #osv{animation:owi 3.2s ease-in-out infinite}
+@keyframes owt{0%{transform:translateY(0) rotate(-3deg) scale(1)}100%{transform:translateY(-5px) rotate(3deg) scale(1.05)}}
+@keyframes owi{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+#sz{flex:1;min-width:0}
+#slbl{font-family:'Fredoka One',cursive;font-size:1rem;color:var(--purple);line-height:1.2;margin-bottom:3px}
+@keyframes db{0%,100%{opacity:1}50%{opacity:.2}}
+#vcw{margin-top:10px}
+#vc{width:100%;height:68px;display:block;border-radius:12px}
+#vlbl{text-align:center;font-size:9px;color:var(--muted);font-weight:700;margin-top:4px;letter-spacing:.8px;text-transform:uppercase}
+#chat{flex:1;margin:4px 12px 4px;border-radius:18px;background:var(--card);border:1.5px solid var(--border);display:flex;flex-direction:column;overflow:hidden;min-height:0}
+#cscroll{flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:9px;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+.mr{display:flex;gap:7px;align-items:flex-start}.mr.u{flex-direction:row-reverse}
+.mav{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;background:var(--card2)}
+.mb{max-width:83%;padding:8px 12px;border-radius:16px;font-size:13px;line-height:1.6;font-weight:600}
+.mb.ai{background:var(--card2);border:1px solid var(--border);border-radius:4px 16px 16px 16px;color:var(--text)}
+.mb.us{background:var(--p2);color:#fff;border-radius:16px 4px 16px 16px}
+.passage{background:rgba(96,165,250,.07);border:1px solid rgba(96,165,250,.22);border-radius:10px;padding:9px;margin-top:6px;font-size:12px;line-height:1.8;color:#B8C9E0;font-style:italic}
+.ph-row{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px}
+.ph{background:rgba(255,217,61,.1);border:2px solid var(--gold);border-radius:7px;padding:3px 8px;font-family:'Fredoka One',cursive;font-size:16px;color:var(--gold);min-width:30px;text-align:center}
+.tdots span{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--purple);margin:0 2px;animation:tda 1.1s infinite}
+.tdots span:nth-child(2){animation-delay:.18s}.tdots span:nth-child(3){animation-delay:.36s}
+@keyframes tda{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-6px)}}
+.ltag{display:inline-block;background:rgba(167,139,250,.14);border-radius:5px;padding:1px 6px;font-size:9px;font-weight:800;color:var(--purple);margin-bottom:3px;letter-spacing:.3px}
+.word{display:inline;border-radius:3px;padding:0 1px;transition:background .08s}
+.word.hi{background:rgba(167,139,250,.38);color:#fff}
+#lbot{display:flex;align-items:center;gap:7px;padding:7px 12px 10px;flex-shrink:0}
+#stopb{width:38px;height:38px;border-radius:50%;background:rgba(248,113,113,.1);border:1.5px solid rgba(248,113,113,.3);cursor:pointer;font-size:16px;display:none;align-items:center;justify-content:center}
+#stopb.vis{display:flex}
+#lmic{width:50px;height:50px;border-radius:50%;background:var(--p2);border:none;cursor:pointer;font-size:20px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s;box-shadow:0 4px 16px rgba(124,58,237,.4)}
+#lmic.on{background:var(--coral);box-shadow:0 4px 16px rgba(255,107,107,.4);animation:mpa 1s infinite}
+@keyframes mpa{0%,100%{transform:scale(1)}50%{transform:scale(1.1)}}
+
+/* ── EXERCISE TAB ── */
+#tab-ex{padding:10px 12px;overflow-y:auto;gap:9px;align-items:stretch;display:none}
+#tab-ex.on{display:flex}
+.exhdr{display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.exhdr h2{font-family:'Fredoka One',cursive;font-size:1.1rem;color:var(--text)}
+#strk-badge{display:flex;align-items:center;gap:4px;background:var(--card2);border:1.5px solid var(--border);border-radius:20px;padding:5px 12px;font-family:'Fredoka One',cursive;font-size:14px;color:var(--gold)}
+#strk-badge.hot{animation:glow .6s ease-in-out infinite alternate}
+@keyframes glow{0%{box-shadow:0 0 8px rgba(255,217,61,.3)}100%{box-shadow:0 0 20px rgba(255,217,61,.6)}}
+#score-bar{background:var(--card);border:1.5px solid var(--border);border-radius:14px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.sb-s{text-align:center}
+.sb-n{font-family:'Fredoka One',cursive;font-size:1.4rem;color:var(--purple)}
+.sb-l{font-size:9px;color:var(--muted);font-weight:800;letter-spacing:.3px}
+#excard{background:var(--card);border:1.5px solid var(--border);border-radius:20px;padding:16px;position:relative;overflow:hidden;flex-shrink:0}
+#excard::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% -20%,rgba(124,58,237,.1) 0,transparent 70%);pointer-events:none}
+.ex-tag{display:inline-block;border-radius:8px;padding:3px 10px;font-size:10px;font-weight:800;color:#fff;margin-bottom:9px;letter-spacing:.4px}
+#exq{font-size:15px;font-weight:800;color:var(--text);line-height:1.55;margin-bottom:12px}
+#expassage{background:rgba(96,165,250,.07);border:1px solid rgba(96,165,250,.2);border-radius:9px;padding:9px;margin-bottom:10px;font-size:12px;line-height:1.8;color:#B8C9E0;font-style:italic;display:none}
+#mcopts{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;display:none}
+.mco{background:var(--card2);border:2px solid var(--border);border-radius:13px;padding:11px 9px;text-align:center;cursor:pointer;font-weight:800;font-size:12px;color:var(--text);transition:all .2s}
+.mco:hover{border-color:var(--purple)}
+.mco.ok{background:rgba(74,222,128,.14);border-color:var(--ok);color:var(--ok);animation:bnc .4s ease-out}
+.mco.ng{background:rgba(248,113,113,.14);border-color:var(--ng);color:var(--ng);animation:shk .35s ease-out}
+.mco.rv{background:rgba(74,222,128,.07);border-color:rgba(74,222,128,.35);color:var(--ok)}
+@keyframes bnc{0%{transform:scale(.95)}50%{transform:scale(1.06)}100%{transform:scale(1)}}
+@keyframes shk{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+#fbwrap{display:none;margin-bottom:10px}
+#fbinp{width:100%;background:var(--card2);border:2px solid var(--border);border-radius:11px;padding:10px 13px;font-family:'Nunito',sans-serif;font-weight:700;font-size:14px;color:var(--text);outline:none;transition:border-color .2s;text-align:center}
+#fbinp:focus{border-color:var(--purple)}
+#fbinp::placeholder{color:var(--muted)}
+#vawrap{display:none;margin-bottom:10px;text-align:center}
+#vahint{font-size:11px;color:var(--muted);font-weight:700;margin-bottom:7px}
+#vatr{min-height:26px;font-size:13px;color:var(--purple);font-weight:700;text-align:center;font-style:italic}
+#exctrls{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-top:4px}
+#exmic{width:42px;height:42px;border-radius:50%;background:var(--card2);border:2px solid var(--border);cursor:pointer;font-size:17px;display:flex;align-items:center;justify-content:center;transition:all .2s;flex-shrink:0}
+#exmic.on{background:rgba(255,107,107,.14);border-color:var(--coral);animation:mpa 1s infinite}
+#exsubmit{flex:1;background:var(--p2);border:none;border-radius:13px;padding:11px;font-family:'Nunito',sans-serif;font-weight:800;font-size:13px;color:#fff;cursor:pointer;display:none}
+#exnext{flex:1;background:var(--teal);border:none;border-radius:13px;padding:11px;font-family:'Nunito',sans-serif;font-weight:800;font-size:13px;color:#0D1F1E;cursor:pointer;display:none}
+#exnew{flex:1;background:var(--p2);border:none;border-radius:13px;padding:11px;font-family:'Nunito',sans-serif;font-weight:800;font-size:13px;color:#fff;cursor:pointer}
+#exnew:disabled{background:var(--card2);color:var(--muted);cursor:default}
+#exfb{border-radius:13px;padding:11px;font-size:13px;font-weight:700;line-height:1.55;display:none;margin-top:9px}
+#exfb.ok{background:rgba(74,222,128,.1);border:1.5px solid rgba(74,222,128,.28);color:var(--ok)}
+#exfb.ng{background:rgba(248,113,113,.1);border:1.5px solid rgba(248,113,113,.28);color:var(--ng)}
+#exload{text-align:center;padding:20px;color:var(--muted);font-weight:700;font-size:12px;display:none}
+
+/* ── PROGRESS TAB ── */
+#tab-prog{padding:12px;overflow-y:auto;gap:10px;display:none}
+#tab-prog.on{display:flex}
+#ptop{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;flex-shrink:0}
+.pst{background:var(--card);border:1.5px solid var(--border);border-radius:14px;padding:11px 7px;text-align:center}
+.psn{font-family:'Fredoka One',cursive;font-size:1.55rem;color:var(--purple)}
+.psl{font-size:9px;color:var(--muted);font-weight:800;margin-top:1px;letter-spacing:.3px}
+#strk-card{background:linear-gradient(135deg,rgba(255,217,61,.13),rgba(251,146,60,.13));border:1.5px solid rgba(255,217,61,.28);border-radius:18px;padding:14px;text-align:center;flex-shrink:0}
+#strk-fire{font-size:2.4rem;margin-bottom:3px}
+#strk-num{font-family:'Fredoka One',cursive;font-size:2rem;color:var(--gold)}
+#strk-msg{font-size:10px;color:rgba(255,217,61,.75);font-weight:700;margin-top:2px}
+#bstrk{font-size:10px;color:var(--muted);margin-top:3px;font-weight:700}
+.psec{font-family:'Fredoka One',cursive;font-size:.92rem;color:var(--text);margin:2px 0 6px}
+.pbr{display:flex;align-items:center;gap:7px;margin-bottom:7px}
+.pbn{font-size:10px;font-weight:800;color:var(--muted);width:86px;flex-shrink:0}
+.pbt{flex:1;background:var(--card2);border-radius:4px;height:10px;overflow:hidden}
+.pbf{height:100%;border-radius:4px;transition:width .7s}
+.pbp{font-size:10px;font-weight:800;color:var(--muted);width:28px;text-align:right;flex-shrink:0}
+.bdgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.bdg{background:var(--card);border:1px solid var(--border);border-radius:11px;padding:8px 4px;text-align:center}
+.bdg.e{background:rgba(255,217,61,.07);border-color:rgba(255,217,61,.35)}
+.bdi{font-size:19px;display:block;margin-bottom:3px}
+.bdn{font-size:8px;font-weight:800;color:var(--muted);line-height:1.2}
+.bdg.e .bdn{color:var(--gold)}
+.rlit{background:var(--card2);border-radius:9px;padding:7px 9px;display:flex;gap:7px;align-items:center;margin-bottom:5px}
+.rltag{font-size:8px;font-weight:800;padding:2px 6px;border-radius:5px;flex-shrink:0;background:rgba(167,139,250,.16);color:var(--purple)}
+.rltx{font-size:10px;color:var(--muted);flex:1}
+#rstbtn{width:100%;background:rgba(248,113,113,.09);border:1.5px solid rgba(248,113,113,.28);border-radius:13px;padding:9px;font-family:'Nunito',sans-serif;font-weight:800;font-size:12px;color:var(--red);cursor:pointer}
+
+/* TAB BAR */
+#tabbar{height:62px;display:flex;align-items:stretch;border-top:1px solid var(--border);flex-shrink:0}
+.tb{flex:1;background:none;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:var(--muted);font-family:'Nunito',sans-serif;font-weight:800;font-size:10px;transition:color .2s;padding:7px 4px}
+.tb .ti{font-size:21px;transition:transform .2s}
+.tb.on{color:var(--purple)}.tb.on .ti{transform:scale(1.15)}
+
+/* OVERLAYS */
+.ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:300;align-items:flex-end;justify-content:center}
+.ov.open{display:flex}
+.sheet{background:#181350;border-radius:24px 24px 0 0;width:100%;max-width:520px;max-height:88vh;overflow-y:auto;padding:18px 18px 28px;position:relative}
+.sh{width:38px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 14px}
+.st2{font-family:'Fredoka One',cursive;font-size:1.2rem;color:var(--purple);margin-bottom:12px}
+.cx{position:absolute;top:14px;right:14px;background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted)}
+.fl{font-size:10px;font-weight:800;color:var(--muted);margin-bottom:5px;letter-spacing:.5px;text-transform:uppercase}
+.fg{margin-bottom:12px}
+.pr{display:flex;flex-wrap:wrap;gap:5px}
+.pl{background:var(--card);border:1.5px solid var(--border);border-radius:20px;padding:6px 12px;font-size:11px;font-weight:800;color:var(--muted);cursor:pointer;transition:all .2s}
+.pl.on{background:var(--p2);border-color:var(--purple);color:#fff}
+.si{width:100%;background:var(--card);border:1.5px solid var(--border);border-radius:11px;padding:9px 12px;font-family:'Nunito',sans-serif;font-weight:700;font-size:14px;color:var(--text);outline:none;transition:border-color .2s}
+.si:focus{border-color:var(--purple)}
+.si::placeholder{color:var(--muted)}
+.sbt{width:100%;background:var(--p2);border:none;border-radius:13px;padding:11px;font-family:'Nunito',sans-serif;font-weight:800;font-size:14px;color:#fff;cursor:pointer;margin-top:7px}
+.sbt.sc{background:var(--card);border:1.5px solid var(--border);color:var(--text)}
+.pin{font-family:'Fredoka One',cursive;font-size:2rem;text-align:center;letter-spacing:12px;width:100%;background:var(--card);border:1.5px solid var(--border);border-radius:11px;padding:11px;color:var(--text);outline:none;margin-bottom:6px}
+.pin:focus{border-color:var(--purple)}
+.pe{color:var(--coral);font-size:11px;text-align:center;font-weight:700;margin-bottom:6px;min-height:16px}
+.sg{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:12px}
+.sc2{background:var(--card2);border-radius:12px;padding:10px;text-align:center}
+.sn2{font-family:'Fredoka One',cursive;font-size:1.55rem;color:var(--purple)}
+.sl2{font-size:9px;color:var(--muted);font-weight:800;margin-top:1px}
+.ds{font-family:'Fredoka One',cursive;font-size:.9rem;color:var(--text);margin:12px 0 6px}
+.sep{height:1px;background:var(--border);margin:10px 0}
+.brc{display:flex;align-items:center;gap:7px;margin-bottom:6px}
+.brn{font-size:10px;font-weight:800;color:var(--muted);width:86px;flex-shrink:0}
+.brt{flex:1;background:var(--card2);border-radius:4px;height:10px;overflow:hidden}
+.brf{height:100%;border-radius:4px;transition:width .6s}
+.brv{font-size:10px;font-weight:800;color:var(--muted);width:20px;text-align:right;flex-shrink:0}
+/* Accessibility: focus outlines for keyboard navigation */
+*:focus-visible{outline:2px solid var(--p1);outline-offset:2px;border-radius:4px}
+button:focus-visible{outline:2px solid var(--p1);outline-offset:2px}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="hdr">
+    <h1>🌟 KiddoAI</h1>
+    <div class="hdr-r">
+      <div class="hpill" onclick="openGrade()">Grade <span id="glbl">K</span> ▾</div>
+      <button class="hico" onclick="openPin()">👨‍👩‍👧</button>
+    </div>
+  </div>
+
+  <div id="tabs">
+    <!-- LEARN -->
+    <div class="tc on" id="tab-learn" role="tabpanel" aria-labelledby="tb-learn">
+      <div id="viz-card">
+        <div id="vt">
+          <div id="oz">
+            <div id="lr"></div>
+            <div id="ow" class="owl-i">
+              <svg id="osv" viewBox="0 0 82 88" xmlns="http://www.w3.org/2000/svg">
+                <ellipse cx="41" cy="76" rx="21" ry="14" fill="#7C3AED" opacity=".9"/>
+                <ellipse cx="18" cy="73" rx="11" ry="14" fill="#6D28D9" transform="rotate(-18 18 73)"/>
+                <ellipse cx="64" cy="73" rx="11" ry="14" fill="#6D28D9" transform="rotate(18 64 73)"/>
+                <circle cx="41" cy="36" r="30" fill="#8B5CF6"/>
+                <polygon points="22,12 14,0 30,10" fill="#6D28D9"/>
+                <polygon points="60,12 68,0 52,10" fill="#6D28D9"/>
+                <ellipse cx="41" cy="38" rx="22" ry="20" fill="#EDE9FE" opacity=".92"/>
+                <circle cx="30" cy="34" r="10" fill="#fff"/>
+                <circle cx="52" cy="34" r="10" fill="#fff"/>
+                <circle id="el" cx="30" cy="35" r="5.5" fill="#1E1B4B"/>
+                <circle id="er" cx="52" cy="35" r="5.5" fill="#1E1B4B"/>
+                <circle cx="32" cy="33" r="2.2" fill="#fff"/>
+                <circle cx="54" cy="33" r="2.2" fill="#fff"/>
+                <g id="bc"><path d="M38,46 Q41,43 44,46 L41,51 Z" fill="#F59E0B"/></g>
+                <g id="bo" style="opacity:0"><path d="M37,44 Q41,40 45,44 L43,51 Q41,55 39,51 Z" fill="#F59E0B"/><ellipse cx="41" cy="50" rx="3" ry="2" fill="#7C2D12"/></g>
+                <circle cx="37" cy="64" r="2" fill="#C4B5FD" opacity=".7"/>
+                <circle cx="41" cy="68" r="2.5" fill="#C4B5FD" opacity=".7"/>
+                <circle cx="45" cy="64" r="2" fill="#C4B5FD" opacity=".7"/>
+              </svg>
+            </div>
+          </div>
+          <div id="sz">
+            <div id="slbl">Tap 🎤 to talk to Ollie</div>
+          </div>
+        </div>
+        <div id="vcw"><canvas id="vc"></canvas></div>
+        <div id="vlbl">🎵 AUDIO VISUALIZER</div>
+      </div>
+      <div id="chat" aria-live="polite"><div id="cscroll"></div></div>
+      <div id="lbot">
+        <button id="stopb" onclick="stopAll()" aria-label="Stop speaking">⏹</button>
+        <button id="lmic" onclick="togLMic()" aria-label="Microphone — tap to talk to Ollie">🎤</button>
+      </div>
+    </div>
+
+    <!-- EXERCISE -->
+    <div class="tc" id="tab-ex" role="tabpanel" aria-labelledby="tb-ex" style="padding:10px 12px;overflow-y:auto;gap:9px;align-items:stretch">
+      <div class="exhdr">
+        <h2 style="font-family:'Fredoka One',cursive;font-size:1.1rem;color:var(--text)">🎯 Exercises</h2>
+        <div id="strk-badge">🔥 <span id="ss">0</span></div>
+      </div>
+      <div id="score-bar">
+        <div class="sb-s"><div class="sb-n" id="sc-c">0</div><div class="sb-l">CORRECT</div></div>
+        <div class="sb-s"><div class="sb-n" id="sc-t">0</div><div class="sb-l">TRIED</div></div>
+        <div class="sb-s"><div class="sb-n" id="sc-p">—</div><div class="sb-l">ACCURACY</div></div>
+        <div class="sb-s"><div class="sb-n" id="sc-b">0</div><div class="sb-l">BEST🔥</div></div>
+      </div>
+      <div id="exload">Generating exercise... 🤔</div>
+      <div id="excard">
+        <div id="extag" class="ex-tag"></div>
+        <div id="exq">Tap "New Exercise" to start practicing!</div>
+        <div id="expassage"></div>
+        <div id="mcopts">
+          <div class="mco" id="o0" onclick="pickMC(0)"></div>
+          <div class="mco" id="o1" onclick="pickMC(1)"></div>
+          <div class="mco" id="o2" onclick="pickMC(2)"></div>
+          <div class="mco" id="o3" onclick="pickMC(3)"></div>
+        </div>
+        <div id="fbwrap">
+          <div style="font-size:11px;color:var(--muted);font-weight:700;margin-bottom:6px;text-align:center">Type or speak your answer 👇</div>
+          <input id="fbinp" class="si" placeholder="Type your answer..." style="text-align:center"/>
+        </div>
+        <div id="vawrap">
+          <div id="vahint" class="vahint">Speak your answer clearly 🎤</div>
+          <div id="vatr"></div>
+        </div>
+        <div id="exctrls" style="display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-top:6px">
+          <button id="exmic" onclick="togExMic()" aria-label="Microphone — speak your answer">🎤</button>
+          <button id="exsubmit" onclick="submitFB()" aria-label="Check answer">Check ✓</button>
+          <button id="exnext" onclick="nextEx()" aria-label="Next exercise">Next ➜</button>
+          <button id="exnew" onclick="newEx()" aria-label="Generate new exercise">New Exercise 🎲</button>
+        </div>
+        <div id="exfb" aria-live="assertive"></div>
+      </div>
+    </div>
+
+    <!-- PROGRESS -->
+    <div class="tc" id="tab-prog" role="tabpanel" aria-labelledby="tb-prog" style="padding:12px;overflow-y:auto;gap:10px;align-items:stretch">
+      <div id="ptop">
+        <div class="pst"><div class="psn" id="pt-t">0</div><div class="psl">EXERCISES</div></div>
+        <div class="pst"><div class="psn" id="pt-c">0</div><div class="psl">CORRECT</div></div>
+        <div class="pst"><div class="psn" id="pt-a">—</div><div class="psl">ACCURACY</div></div>
+      </div>
+      <div id="strk-card">
+        <div id="strk-fire">🔥</div>
+        <div id="strk-num">0</div>
+        <div id="strk-msg">Current streak</div>
+        <div id="bstrk">Best: 0</div>
+      </div>
+      <div class="psec">📊 Accuracy by Subject</div>
+      <div id="prog-bars"></div>
+      <div class="psec">🏆 Badges</div>
+      <div class="bdgrid" id="prog-bdg"></div>
+      <div class="psec">📝 Recent Exercises</div>
+      <div id="prog-rec"></div>
+      <button id="rstbtn" onclick="resetSess()">↺ Reset Session</button>
+    </div>
+  </div>
+
+  <div id="tabbar" role="tablist" aria-label="App sections">
+    <button class="tb on" id="tb-learn" onclick="showTab('learn')" role="tab" aria-selected="true" aria-controls="tab-learn"><span class="ti">📚</span>Learn</button>
+    <button class="tb"    id="tb-ex"    onclick="showTab('ex')" role="tab" aria-selected="false" aria-controls="tab-ex"><span class="ti">🎯</span>Exercises</button>
+    <button class="tb"    id="tb-prog"  onclick="showTab('prog')" role="tab" aria-selected="false" aria-controls="tab-prog"><span class="ti">📊</span>Progress</button>
+  </div>
+</div>
+
+<!-- OVERLAYS -->
+<div class="ov" id="ov-grade" role="dialog" aria-modal="true" aria-label="Select grade"><div class="sheet"><div class="sh"></div>
+  <button class="cx" onclick="closeAll()">✕</button>
+  <div class="st2">🎓 Grade Level</div>
+  <div class="fg"><div class="pr" id="gpr">
+    <div class="pl on" data-g="K" onclick="pickGrade('K')">Kindergarten</div>
+    <div class="pl" data-g="1" onclick="pickGrade('1')">Grade 1</div>
+    <div class="pl" data-g="2" onclick="pickGrade('2')">Grade 2</div>
+    <div class="pl" data-g="3" onclick="pickGrade('3')">Grade 3</div>
+    <div class="pl" data-g="4" onclick="pickGrade('4')">Grade 4</div>
+    <div class="pl" data-g="5" onclick="pickGrade('5')">Grade 5</div>
+    <div class="pl" data-g="6" onclick="pickGrade('6')">Grade 6</div>
+  </div></div>
+  <button class="sbt" onclick="closeAll()">Done ✓</button>
+</div></div>
+
+
+<div class="ov" id="ov-pin" role="dialog" aria-modal="true" aria-label="Enter parent PIN"><div class="sheet"><div class="sh"></div>
+  <button class="cx" onclick="closeAll()">✕</button>
+  <div class="st2">👨‍👩‍👧 Parent Area</div>
+  <p style="font-size:12px;color:var(--muted);margin-bottom:8px">Enter your 4-digit PIN</p>
+  <input class="pin" id="pin-inp" type="password" maxlength="4" placeholder="····" oninput="this.value=this.value.replace(/\D/g,'')"/>
+  <div class="pe" id="pin-err"></div>
+  <button class="sbt" onclick="chkPin()">Enter</button>
+  <p style="text-align:center;font-size:10px;color:var(--muted);margin-top:7px">Default PIN: 1234</p>
+</div></div>
+
+<div class="ov" id="ov-dash" role="dialog" aria-modal="true" aria-label="Parent dashboard"><div class="sheet"><div class="sh"></div>
+  <button class="cx" onclick="closeAll()">✕</button>
+  <div class="st2">📊 Parent Dashboard</div>
+  <div class="sg" id="d-stats"></div>
+  <div class="fg"><div class="fl">Difficulty Level</div>
+    <div class="pr" id="dpr">
+      <div class="pl on" data-d="Beginner" onclick="setDiff('Beginner')">Beginner</div>
+      <div class="pl" data-d="Novice" onclick="setDiff('Novice')">Novice</div>
+      <div class="pl" data-d="Intermediate" onclick="setDiff('Intermediate')">Mid</div>
+      <div class="pl" data-d="Hard" onclick="setDiff('Hard')">Hard</div>
+    </div>
+  </div>
+  <div class="ds">📈 Activity by Subject</div><div id="d-bars"></div>
+  <div class="sep"></div>
+  <button class="sbt sc" onclick="openChgPin()" style="margin-bottom:6px">🔒 Change PIN</button>
+  <button class="sbt sc" onclick="closeAll()">Close</button>
+</div></div>
+
+<div class="ov" id="ov-chpin" role="dialog" aria-modal="true" aria-label="Change PIN"><div class="sheet"><div class="sh"></div>
+  <button class="cx" onclick="closeAll()">✕</button>
+  <div class="st2">🔒 Change PIN</div>
+  <input class="pin" id="p1" type="password" maxlength="4" placeholder="New PIN" oninput="this.value=this.value.replace(/\D/g,'')"/>
+  <input class="pin" id="p2" type="password" maxlength="4" placeholder="Confirm PIN" oninput="this.value=this.value.replace(/\D/g,'')"/>
+  <div class="pe" id="chpe"></div>
+  <button class="sbt" onclick="saveChgPin()">Save</button>
+</div></div>
+
+<div class="ov" id="ov-coppa" style="z-index:9999"><div class="sheet" style="max-width:380px"><div class="sh"></div>
+  <div class="st2">👋 Welcome to KiddoAI!</div>
+  <div style="font-size:12px;color:var(--muted);line-height:1.6;margin:8px 0;text-align:left">
+    <p>A parent or guardian must consent before this app can be used.</p>
+    <p><strong>What we do:</strong> Voice input is transcribed on your device and sent to Google AI to generate tutoring responses. No child names or personal data are stored on our servers.</p>
+    <p><strong>What we don't do:</strong> We do not collect, share, or sell any personal information to third parties.</p>
+    <p>By continuing, you confirm you are a parent/guardian and agree to our <a href="privacy.html" target="_blank" style="color:var(--p1)">Privacy Policy</a>.</p>
+  </div>
+  <label style="display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;color:var(--text);margin:10px 0;cursor:pointer">
+    <input type="checkbox" id="coppa-chk"/> I am the parent/guardian and I consent
+  </label>
+  <button class="sbt" id="coppa-btn" onclick="acceptCoppa()" disabled style="opacity:.5">Continue</button>
+</div></div>
+
+<script>
+/* ══ API CONFIG ══ */
+window.AI_PROXY='https://forthechild.vercel.app/api'; // Vercel proxy — API key server-side
+
+/* ══ ERROR MONITORING ══ */
+function reportError(type,message,context){
+  try{fetch(window.AI_PROXY.replace('/api','')+'/api/errors',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type,message,context,timestamp:new Date().toISOString()})}).catch(()=>{});}catch(e){}
+}
+window.onerror=function(msg,src,line){reportError('js',msg,'line:'+line);};
+window.onunhandledrejection=function(e){reportError('promise',e.reason&&e.reason.message||String(e.reason));};
+
+/* ══ CONSTANTS ══ */
+const SUBS=['Spelling','Grammar','Comprehension','Science','Technology','Engineering','Math'];
+const SCOL={Spelling:'#F59E0B',Grammar:'#EC4899',Comprehension:'#3B82F6',Science:'#10B981',Technology:'#6366F1',Engineering:'#F97316',Math:'#FACC15'};
+const GN={K:'Kindergarten (5-6y): 2-4 letter words, counting 1-20, shapes. Very short responses.',1:'Grade 1 (6-7y): Short vowels, add/subtract, weather, plants. 2-3 sentences.',2:'Grade 2 (7-8y): Long vowels, 2-digit math, animal habitats. 3-4 sentences.',3:'Grade 3 (8-9y): Multi-syllable words, multiplication 1-10, earth science. 3-5 sentences.',4:'Grade 4 (9-10y): Prefixes/suffixes, long division, physical science. 4-5 sentences.',5:'Grade 5 (10-11y): Root words, pre-algebra, life science. 4-6 sentences.',6:'Grade 6 (11-12y): Literary devices, algebra, advanced science. 5-7 sentences.'};
+const DN={Beginner:'Very easy. Many hints. Celebrate everything.',Novice:'Slightly challenging. Hints when needed.',Intermediate:'Standard pace. Minimal hints.',Hard:'Challenging. Push child deeper.'};
+const SN={Spelling:'Teach phonics, sound it out syllable by syllable. Put chunks in phonics array.',Grammar:'Parts of speech, punctuation, sentence structure with fun examples.',Comprehension:'Short passage then comprehension questions one at a time. Put passage in "passage" field.',Science:'Real-world examples, home experiments.',Technology:'Digital literacy, coding basics, internet safety.',Engineering:'Design thinking, problem solving, structures.',Math:'Step by step with real examples. Show working.'};
+const BADGES=[
+  {id:'sp5',icon:'📖',name:'Spelling Star',chk:s=>(s.cnt.Spelling||0)>=5},
+  {id:'gr5',icon:'✏️',name:'Grammar Guru',chk:s=>(s.cnt.Grammar||0)>=5},
+  {id:'rd5',icon:'📚',name:'Reading Champ',chk:s=>(s.cnt.Comprehension||0)>=5},
+  {id:'sc5',icon:'🔬',name:'Scientist',chk:s=>(s.cnt.Science||0)>=5},
+  {id:'tc5',icon:'💻',name:'Tech Wizard',chk:s=>(s.cnt.Technology||0)>=5},
+  {id:'en5',icon:'⚙️',name:'Engineer',chk:s=>(s.cnt.Engineering||0)>=5},
+  {id:'mt5',icon:'🔢',name:'Math Hero',chk:s=>(s.cnt.Math||0)>=5},
+  {id:'s5', icon:'🔥',name:'5 Streak!',chk:s=>(s.bestStreak||0)>=5},
+  {id:'s15',icon:'🔥🔥',name:'15 Streak!',chk:s=>(s.bestStreak||0)>=15},
+  {id:'t20',icon:'⭐',name:'20 Exercises',chk:s=>(s.totalEx||0)>=20},
+  {id:'all',icon:'🏆',name:'All-Rounder',chk:s=>SUBS.every(b=>(s.cnt[b]||0)>=1)},
+];
+
+/* ══ STATE ══ */
+let S={
+  grade:'K',diff:'Beginner',pin:'1234',
+  cnt:{Spelling:0,Grammar:0,Comprehension:0,Science:0,Technology:0,Engineering:0,Math:0},
+  ex:{Spelling:{c:0,t:0},Grammar:{c:0,t:0},Comprehension:{c:0,t:0},Science:{c:0,t:0},Technology:{c:0,t:0},Engineering:{c:0,t:0},Math:{c:0,t:0}},
+  streak:0,bestStreak:0,totalEx:0,
+  earnedBadges:[],recentEx:[],recentQ:[],chatHist:[],busy:false
+};
+function saveS(){try{const {chatHist,busy,...r}=S;localStorage.setItem('kai5',JSON.stringify(r));}catch(e){}}
+function loadS(){try{const d=localStorage.getItem('kai5');if(d)Object.assign(S,JSON.parse(d));}catch(e){}}
+loadS();
+
+/* ══ VISUALIZER ══ */
+const VIZ=(()=>{
+  const N=30;let cv,cx,H=[],T=[],C=[],active=false,_bi,_bt;
+  const PAL=['#FF6B6B','#FF8E53','#FFD93D','#6BCB77','#2DD4BF','#60A5FA','#A78BFA','#F472B6','#FB923C','#34D399'];
+  function ini(){cv=document.getElementById('vc');cx=cv.getContext('2d');for(let i=0;i<N;i++){H[i]=2;T[i]=2;C[i]=PAL[i%PAL.length];}rsz();window.addEventListener('resize',rsz);loop();}
+  function rsz(){if(!cv)return;const r=cv.parentElement.getBoundingClientRect();cv.width=(r.width||300)*devicePixelRatio;cv.height=68*devicePixelRatio;cv.style.height='68px';}
+  function tgt(){const mx=active?90:11,mn=active?20:2,p=active?.42:.05;for(let i=0;i<N;i++)if(Math.random()<p)T[i]=mn+Math.random()*(mx-mn);}
+  function drw(){
+    if(!cx)return;
+    const W=cv.width,Hc=cv.height,dpr=devicePixelRatio||1,gap=3*dpr,bw=(W-(N-1)*gap)/N,spd=active?.22:.05,mid=Hc/2;
+    cx.clearRect(0,0,W,Hc);
+    for(let i=0;i<N;i++){
+      H[i]+=(T[i]-H[i])*spd;
+      const h=(H[i]/100)*Hc,hh=h/2,x=i*(bw+gap),r2=Math.min(bw/2,5*dpr);
+      const g=cx.createLinearGradient(0,mid-hh,0,mid+hh);
+      g.addColorStop(0,C[i]+(active?'FF':'44'));g.addColorStop(.5,C[i]+(active?'BB':'22'));g.addColorStop(1,C[i]+(active?'FF':'44'));
+      cx.fillStyle=g;cx.beginPath();cx.roundRect(x,mid-hh,bw,hh,[r2,r2,0,0]);cx.fill();
+      cx.beginPath();cx.roundRect(x,mid,bw,hh,[0,0,r2,r2]);cx.fill();
+      if(active){cx.fillStyle=C[i]+'77';cx.beginPath();cx.roundRect(x,mid-hh-3*dpr,bw,4*dpr,r2);cx.fill();}
+    }
+  }
+  function loop(){tgt();drw();requestAnimationFrame(loop);}
+  function beak(on){clearInterval(_bi);if(on){let o=true;_bi=setInterval(()=>{document.getElementById('bc').style.opacity=o?0:1;document.getElementById('bo').style.opacity=o?1:0;o=!o;},195);}else{document.getElementById('bc').style.opacity=1;document.getElementById('bo').style.opacity=0;}}
+  function blink(){clearTimeout(_bt);const go=()=>{_bt=setTimeout(()=>{['el','er'].forEach(id=>{const e=document.getElementById(id);e.setAttribute('ry','0.2');setTimeout(()=>e.setAttribute('ry','5.5'),120);});go();},2500+Math.random()*3500);};go();}
+  return{
+    ini,
+    start(){active=true;document.getElementById('ow').className='owl-t';document.getElementById('lr').className='spk';document.getElementById('slbl').textContent='Ollie is talking! 🎙️';document.getElementById('vlbl').textContent='🎵 OLLIE IS SPEAKING';document.getElementById('stopb').classList.add('vis');beak(true);blink();},
+    stop(){active=false;document.getElementById('ow').className='owl-i';document.getElementById('stopb').classList.remove('vis');beak(false);document.getElementById('lr').className='';document.getElementById('slbl').textContent='Tap 🎤 to talk to Ollie';document.getElementById('vlbl').textContent='🎵 AUDIO VISUALIZER';}
+  };
+})();
+
+/* ══ TTS WITH WORD HIGHLIGHT ══ */
+let _ttel=null;
+function speak(txt,el){
+  const clean=txt.replace(/[*_~`#]/g,'').substring(0,800);
+  _ttel=el||null;
+  if(NB.ok){NB.call('speak',{text:clean});VIZ.start();return;}
+  if(!window.speechSynthesis)return;
+  window.speechSynthesis.cancel();
+  const u=new SpeechSynthesisUtterance(clean);u.rate=.88;u.pitch=1.1;
+  const vv=window.speechSynthesis.getVoices();
+  const pick=vv.find(v=>/female|zira|samantha|victoria|karen|moira|fiona/i.test(v.name))||vv[0];
+  if(pick)u.voice=pick;
+  VIZ.start();
+  if(_ttel){
+    const words=clean.split(/\s+/);
+    _ttel.innerHTML=words.map((w,i)=>`<span class="word" id="w${i}">${esc(w)}</span>`).join(' ');
+    let wIdx=0,charPos=0;
+    u.onboundary=ev=>{
+      if(ev.name!=='word')return;
+      document.querySelectorAll('.word').forEach(e=>e.classList.remove('hi'));
+      let p=0;for(let i=0;i<words.length;i++){if(p>=ev.charIndex){wIdx=i;break;}p+=words[i].length+1;}
+      const we=document.getElementById('w'+wIdx);if(we){we.classList.add('hi');we.scrollIntoView({block:'nearest',behavior:'smooth'});}
+    };
+  }
+  u.onend=u.onerror=()=>{VIZ.stop();if(_ttel)document.querySelectorAll('.word').forEach(e=>e.classList.remove('hi'));_ttel=null;};
+  window.speechSynthesis.speak(u);
+}
+function stopAll(){window.speechSynthesis&&window.speechSynthesis.cancel();if(NB.ok)NB.call('stopSpeaking');VIZ.stop();if(_ttel)document.querySelectorAll('.word').forEach(e=>e.classList.remove('hi'));_ttel=null;}
+function onAndroidTTSDone(){VIZ.stop();}
+
+/* ══ NATIVE BRIDGE HELPER ══ */
+const NB={
+  get ok(){return window.IS_ANDROID&&window.Capacitor&&window.Capacitor.Plugins&&window.Capacitor.Plugins.SpeechPlugin;},
+  call(method,args){if(this.ok)try{window.Capacitor.Plugins.SpeechPlugin[method](args||{}).catch(()=>{});}catch(e){}},
+};
+
+/* ══ STT — LEARN ══ */
+let _lsr=null,_lmic=false,_speechTarget='learn';
+function togLMic(){
+  if(_lmic){stopLMic();return;}
+  _speechTarget='learn';
+  if(NB.ok){_lmic=true;micUI('lmic',true);NB.call('startListening');return;}
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){document.getElementById('slbl').textContent='Speech not available. Try Chrome.';return;}
+  _lsr=new SR();_lsr.lang='en-US';_lsr.interimResults=false;
+  _lmic=true;micUI('lmic',true);
+  _lsr.onresult=e=>{try{const t=e.results[0][0].transcript;stopLMic();sendL(t);}catch(err){stopLMic();}};
+  _lsr.onend=_lsr.onerror=()=>stopLMic();
+  _lsr.start();
+}
+function stopLMic(){_lsr&&_lsr.stop();_lsr=null;_lmic=false;micUI('lmic',false);}
+function micUI(id,on){const b=document.getElementById(id);if(!b)return;b.textContent=on?'⏹':'🎤';b.className=on?'on':'';}
+function onAndroidSpeechResult(t){
+  if(_speechTarget==='exercise'){stopEMic();document.getElementById('vatr').textContent=t;handleVoiceAns(t);}
+  else{stopLMic();sendL(t);}
+}
+function onAndroidSpeechError(reason){
+  const msg=reason||"Couldn't hear you — tap 🎤 to try again";
+  reportError('speech',msg,_speechTarget);
+  if(_speechTarget==='exercise'){stopEMic();document.getElementById('vatr').textContent=msg;}
+  else{stopLMic();document.getElementById('slbl').textContent=msg;}
+}
+
+/* ══ STT — EXERCISE ══ */
+let _esr=null,_emic=false;
+function togExMic(){
+  if(_emic){stopEMic();return;}
+  _speechTarget='exercise';
+  if(NB.ok){_emic=true;micUI('exmic',true);document.getElementById('vatr').textContent='🎤 Listening...';NB.call('startListening');return;}
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){alert('Speech recognition unavailable.');return;}
+  _esr=new SR();_esr.lang='en-US';_esr.interimResults=true;
+  _emic=true;micUI('exmic',true);
+  document.getElementById('vatr').textContent='🎤 Listening...';
+  _esr.onresult=e=>{
+    const t=Array.from(e.results).map(r=>r[0].transcript).join('');
+    document.getElementById('vatr').textContent=t;
+    if(e.results[e.results.length-1].isFinal){stopEMic();handleVoiceAns(t);}
+  };
+  _esr.onend=()=>stopEMic();_esr.onerror=()=>{stopEMic();document.getElementById('vatr').textContent='';};
+  _esr.start();
+}
+function stopEMic(){_esr&&_esr.stop();_esr=null;_emic=false;micUI('exmic',false);}
+
+/* ══ AI ENGINE ══ */
+async function aiGenerate(prompt,systemPrompt,maxTokens){
+  // Tier 1: On-device Gemma via Capacitor plugin
+  if(window.Capacitor&&window.Capacitor.Plugins&&window.Capacitor.Plugins.GemmaPlugin){
+    try{const res=await window.Capacitor.Plugins.GemmaPlugin.generate({prompt,system:systemPrompt||'',maxTokens:maxTokens||1000});if(res&&res.text)return res.text;}
+    catch(e){console.log('[AI] On-device failed, trying proxy...');}
+  }
+  // Tier 2: Backend proxy → Google AI (Gemini 2.5 Flash) — API key stays server-side
+  const proxy=window.AI_PROXY;
+  if(!proxy)throw new Error('No AI proxy configured');
+  const r=await fetch(proxy+'/ai/generate',{
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      system_instruction:systemPrompt?{parts:[{text:systemPrompt}]}:undefined,
+      contents:[{role:'user',parts:[{text:prompt}]}],
+      generationConfig:{maxOutputTokens:maxTokens||1000,temperature:0.7}
+    })
+  });
+  const data=await r.json();
+  if(data.error){reportError('api',data.error.message||JSON.stringify(data.error),'aiGenerate');throw new Error(data.error.message||data.error);}
+  return (data.candidates&&data.candidates[0]&&data.candidates[0].content&&data.candidates[0].content.parts&&data.candidates[0].content.parts[0]&&data.candidates[0].content.parts[0].text)||'';
+}
+
+/* ══ AI — LEARN ══ */
+function sysPmt(){return`You are Ollie the Owl 🦉, a warm enthusiastic AI tutor for children.
+Grade: ${S.grade} | Difficulty: ${S.diff}
+${GN[S.grade]} Difficulty: ${DN[S.diff]}
+
+You handle ALL subjects naturally based on what the child talks about:
+- Spelling: ${SN.Spelling}
+- Grammar: ${SN.Grammar}
+- Comprehension: ${SN.Comprehension}
+- Science: ${SN.Science}
+- Technology: ${SN.Technology}
+- Engineering: ${SN.Engineering}
+- Math: ${SN.Math}
+
+Rules: Speak directly. Short age-appropriate. ONE question at a time. Celebrate effort. Use emojis ✨.
+Detect the subject from what the child says. If unclear, ask what they'd like to learn about or suggest something fun.
+For spelling: put word sound chunks in phonics array.
+For comprehension: put reading passage in "passage" field first message only.
+Return ONLY valid JSON: {"message":"...","phonics":[],"passage":"","lessonType":"Teaching|Practice|Quiz|Comprehension|Spelling|Math","detectedSubject":"Spelling|Grammar|Comprehension|Science|Technology|Engineering|Math"}`;}
+
+async function callAI(userMsg,hist){
+  hist.push({role:'user',content:userMsg});addTyp();
+  try{
+    const histStr=hist.map(m=>(m.role==='user'?'User: ':'Assistant: ')+m.content).join('\n');
+    const raw=await aiGenerate(histStr,sysPmt(),1000);
+    let p;try{p=JSON.parse(raw.replace(/```json|```/g,'').trim());}catch{p={message:raw,phonics:[],passage:'',lessonType:'Teaching',detectedSubject:'Comprehension'};}
+    rmTyp();hist.push({role:'assistant',content:raw});
+    const msg=p.message||raw;const el=addBub('ai',msg,p);speak(msg,el);
+    const detSub=(p.detectedSubject&&SUBS.includes(p.detectedSubject))?p.detectedSubject:'Comprehension';
+    S.cnt[detSub]=(S.cnt[detSub]||0)+1;S.recentQ.unshift({sub:detSub,grade:S.grade,q:userMsg.substring(0,55)});
+    if(S.recentQ.length>12)S.recentQ.pop();saveS();checkBadges();
+  }catch(e){rmTyp();addBub('ai','Oops! 🙈 Something went wrong. Try again!',{});reportError('callAI',e.message,'learn');}
+  S.busy=false;
+}
+function sendL(txt){if(!txt||!txt.trim()||S.busy)return;S.busy=true;addBub('user',txt,{});callAI(txt,S.chatHist);}
+function startLesson(){if(S.busy)return;S.busy=true;const p=["Hi Ollie! I'm ready to learn!","Teach me something fun!","I want to learn something new!","What can we learn today?"];callAI(p[Math.floor(Math.random()*p.length)],S.chatHist);}
+
+/* ══ TRANSCRIPT ══ */
+function esc(t){return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function fmt(t){return esc(t).replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\n/g,'<br>');}
+function addBub(role,txt,ex){
+  const sc=document.getElementById('cscroll');const d=document.createElement('div');d.className='mr'+(role==='user'?' u':'');
+  let mel=null;
+  if(role==='user'){d.innerHTML=`<div class="mav">👦</div><div class="mb us">${fmt(txt)}</div>`;}
+  else{
+    let h=`<div class="mav">🦉</div><div class="mb ai">`;
+    if(ex&&ex.lessonType)h+=`<div class="ltag">${ex.lessonType}</div><br>`;
+    h+=`<span class="mxt">${fmt(txt)}</span>`;
+    if(ex&&ex.passage)h+=`<div class="passage">📖 ${fmt(ex.passage)}</div>`;
+    if(ex&&ex.phonics&&ex.phonics.length)h+=`<div class="ph-row">${ex.phonics.map(p=>`<div class="ph">${esc(p)}</div>`).join('')}</div>`;
+    h+=`</div>`;d.innerHTML=h;mel=d.querySelector('.mxt');
+  }
+  sc.appendChild(d);sc.scrollTop=sc.scrollHeight;return mel;
+}
+function addTyp(){const sc=document.getElementById('cscroll');const d=document.createElement('div');d.className='mr';d.id='td';d.innerHTML=`<div class="mav">🦉</div><div class="mb ai"><div class="tdots"><span></span><span></span><span></span></div></div>`;sc.appendChild(d);sc.scrollTop=sc.scrollHeight;}
+function rmTyp(){const e=document.getElementById('td');if(e)e.remove();}
+
+/* ══ EXERCISE SYSTEM ══ */
+let CUREX=null;
+const EXPM=()=>{
+const ctx=S.chatHist.length>0?'The child has been learning about: '+S.chatHist.slice(-4).map(m=>m.content.substring(0,80)).join(' | ')+'. Generate an exercise related to what they were learning.':'Pick an appropriate subject for Grade '+S.grade+'.';
+return`Generate ONE exercise for Grade ${S.grade}, difficulty ${S.diff}.
+${GN[S.grade]}
+${ctx}
+Subjects: Spelling, Grammar, Comprehension, Science, Technology, Engineering, Math.
+For Reading/Grammar: prefer "voice_answer" or "fill_blank" — child speaks or types.
+For Math: prefer "multiple_choice" or "fill_blank".
+For Science/Tech/Eng: prefer "multiple_choice" or "voice_answer".
+For Spelling: prefer "fill_blank" (child spells the word).
+Return ONLY this JSON:
+{"type":"multiple_choice|fill_blank|voice_answer","question":"...","options":["A","B","C","D"],"correct_index":0,"sentence":"The ___ sat.","blank_word":"cat","correct_answer":"full expected answer","hint":"short hint","explanation":"encouraging explanation","subject_emoji":"📖","detectedSubject":"Spelling|Grammar|Comprehension|Science|Technology|Engineering|Math"}`;
+};
+
+const CHKPM=(q,correct,given)=>`Grade ${S.grade} ${(CUREX&&CUREX.detectedSubject)||'General'}. Question: ${q}. Correct: ${correct}. Child said: ${given}.
+Is this essentially correct? Be generous with minor spelling/wording.
+Return ONLY JSON: {"correct":true,"feedback":"1-2 sentences","explanation":"brief if wrong"}`;
+
+async function newEx(){
+  CUREX=null;
+  const nb=document.getElementById('exnew');nb.disabled=true;
+  document.getElementById('exload').style.display='block';
+  document.getElementById('exfb').style.display='none';
+  ['mcopts','fbwrap','vawrap'].forEach(id=>document.getElementById(id).style.display='none');
+  document.getElementById('exsubmit').style.display='none';
+  document.getElementById('exnext').style.display='none';
+  document.getElementById('vatr').textContent='';document.getElementById('fbinp').value='';
+  [0,1,2,3].forEach(i=>{const e=document.getElementById('o'+i);e.className='mco';e.textContent='';});
+  try{
+    const raw=await aiGenerate(EXPM(),'',600);
+    let ex;try{ex=JSON.parse(raw.replace(/```json|```/g,'').trim());}catch{document.getElementById('exq').textContent='Could not generate exercise. Check connection.';nb.disabled=false;document.getElementById('exload').style.display='none';return;}
+    CUREX=ex;renderEx(ex);
+  }catch(e){document.getElementById('exq').textContent='Connection error. Check your API key.';}
+  nb.disabled=false;document.getElementById('exload').style.display='none';
+}
+
+function renderEx(ex){
+  const exSub=(ex.detectedSubject&&SUBS.includes(ex.detectedSubject))?ex.detectedSubject:'Comprehension';
+  const tag=document.getElementById('extag');
+  tag.textContent=(ex.subject_emoji||'🎯')+' '+exSub+' · Grade '+S.grade+' · '+S.diff;
+  tag.style.background=SCOL[exSub]||'#7C3AED';
+  document.getElementById('expassage').style.display='none';
+  document.getElementById('exfb').style.display='none';
+  document.getElementById('exnext').style.display='none';
+  document.getElementById('exnew').style.display='block';
+  if(ex.type==='multiple_choice'){
+    document.getElementById('exq').textContent=ex.question;
+    document.getElementById('mcopts').style.display='grid';
+    ex.options.forEach((opt,i)=>{const e=document.getElementById('o'+i);e.className='mco';e.textContent=String.fromCharCode(65+i)+'. '+opt;});
+    document.getElementById('exsubmit').style.display='none';
+    speak(ex.question);
+  } else if(ex.type==='fill_blank'){
+    document.getElementById('exq').textContent=ex.sentence||ex.question;
+    document.getElementById('fbwrap').style.display='block';
+    document.getElementById('vawrap').style.display='block';
+    document.getElementById('vahint').textContent='Type or speak the missing word 🎤';
+    document.getElementById('exsubmit').style.display='block';
+    speak(ex.sentence||ex.question);
+  } else {
+    document.getElementById('exq').textContent=ex.question;
+    document.getElementById('vawrap').style.display='block';
+    document.getElementById('vahint').textContent='Speak your answer clearly 🎤';
+    document.getElementById('exsubmit').style.display='none';
+    speak(ex.question);
+  }
+}
+
+function pickMC(idx){
+  if(!CUREX||CUREX.type!=='multiple_choice')return;
+  const ok=CUREX.correct_index===idx;
+  [0,1,2,3].forEach(i=>{
+    const e=document.getElementById('o'+i);
+    if(i===idx)e.classList.add(ok?'ok':'ng');
+    else if(i===CUREX.correct_index&&!ok)e.classList.add('rv');
+  });
+  finishEx(ok,CUREX.explanation||'',CUREX.options[CUREX.correct_index]);
+}
+
+function submitFB(){
+  if(!CUREX)return;
+  const ans=document.getElementById('fbinp').value.trim()||document.getElementById('vatr').textContent.trim();
+  if(!ans){speak('Please type or say your answer first!');return;}
+  checkVoice(ans);
+}
+
+function handleVoiceAns(txt){
+  if(!CUREX)return;
+  if(CUREX.type==='multiple_choice'){
+    const t=txt.toLowerCase();const letters=['a','b','c','d'];let idx=-1;
+    for(let i=0;i<4;i++){if(t.includes(letters[i])||(CUREX.options[i]&&t.includes(CUREX.options[i].toLowerCase())))idx=i;}
+    if(idx>=0)pickMC(idx);else speak('I heard: '+txt+'. Try saying A, B, C, or D!');
+  } else checkVoice(txt);
+}
+
+async function checkVoice(given){
+  const sb=document.getElementById('exsubmit');if(sb)sb.disabled=true;
+  document.getElementById('exload').style.display='block';
+  const ca=CUREX.correct_answer||CUREX.blank_word||'';
+  try{
+    const raw=await aiGenerate(CHKPM(CUREX.question||CUREX.sentence,ca,given),'',200);
+    let chk;try{chk=JSON.parse(raw.replace(/```json|```/g,'').trim());}catch{chk={correct:false,feedback:'Could not check answer.',explanation:''};}
+    finishEx(chk.correct,chk.explanation||chk.feedback||'',ca);
+  }catch(e){finishEx(false,'Connection error. Try again!',ca);}
+  document.getElementById('exload').style.display='none';
+  if(sb)sb.disabled=false;
+}
+
+function finishEx(ok,explanation,correctAns){
+  if(ok){S.streak++;S.bestStreak=Math.max(S.bestStreak,S.streak);}else{S.streak=0;}
+  const fb=document.getElementById('exfb');
+  fb.className=ok?'ok':'ng';
+  fb.innerHTML=ok?('✅ '+(S.streak>=5?'🔥 On fire! ':'')+'Correct! '+(explanation||'Great job!'))
+    :('❌ Not quite! Answer: <strong>'+esc(String(correctAns))+'</strong>. '+(explanation||'Keep trying! You\'re doing great! 💪'));
+  fb.style.display='block';
+  const exSub=(CUREX&&CUREX.detectedSubject&&SUBS.includes(CUREX.detectedSubject))?CUREX.detectedSubject:'Comprehension';
+  if(!S.ex[exSub])S.ex[exSub]={c:0,t:0};
+  S.ex[exSub].t++;S.totalEx++;if(ok)S.ex[exSub].c++;
+  S.recentEx.unshift({sub:exSub,correct:ok,q:(CUREX.question||CUREX.sentence||'').substring(0,45)});
+  if(S.recentEx.length>12)S.recentEx.pop();
+  saveS();checkBadges();updScoreBar();
+  speak(fb.textContent.replace(/[✅❌🔥💪]/g,'').substring(0,200));
+  document.getElementById('exnext').style.display='block';
+  document.getElementById('exnew').style.display='none';
+}
+
+function nextEx(){document.getElementById('exnext').style.display='none';document.getElementById('exnew').style.display='block';newEx();}
+function resetSess(){if(!confirm('Reset all exercise scores?'))return;SUBS.forEach(s=>S.ex[s]={c:0,t:0});S.streak=0;S.totalEx=0;S.recentEx=[];saveS();updScoreBar();updProg();}
+
+function updScoreBar(){
+  const tot=Object.values(S.ex).reduce((a,b)=>a+b.t,0),cor=Object.values(S.ex).reduce((a,b)=>a+b.c,0);
+  document.getElementById('sc-c').textContent=cor;document.getElementById('sc-t').textContent=tot;
+  document.getElementById('sc-p').textContent=tot?Math.round(cor/tot*100)+'%':'—';document.getElementById('sc-b').textContent=S.bestStreak;
+  document.getElementById('ss').textContent=S.streak;
+  const sb=document.getElementById('strk-badge');sb.className=S.streak>=5?'hot':'';
+  sb.innerHTML=(S.streak>=15?'🔥🔥🔥':S.streak>=5?'🔥🔥':'🔥')+' <span id="ss">'+S.streak+'</span>';
+}
+
+/* ══ PROGRESS TAB ══ */
+function updProg(){
+  const tot=Object.values(S.ex).reduce((a,b)=>a+b.t,0),cor=Object.values(S.ex).reduce((a,b)=>a+b.c,0);
+  document.getElementById('pt-t').textContent=tot;document.getElementById('pt-c').textContent=cor;
+  document.getElementById('pt-a').textContent=tot?Math.round(cor/tot*100)+'%':'—';
+  document.getElementById('strk-num').textContent=S.streak;document.getElementById('bstrk').textContent='Best: '+S.bestStreak;
+  const f=S.streak>=20?'🔥🔥🔥🔥🔥':S.streak>=10?'🔥🔥🔥':S.streak>=5?'🔥🔥':'🔥';
+  document.getElementById('strk-fire').textContent=f;
+  document.getElementById('strk-msg').textContent=S.streak>=10?'You\'re on FIRE! 🌟':S.streak>=5?'Amazing! Keep going! 🎉':S.streak>=2?'Great streak!':'Current streak';
+  const mx=Math.max(...SUBS.map(s=>(S.ex[s]||{t:0}).t),1);
+  document.getElementById('prog-bars').innerHTML=SUBS.map(sub=>{
+    const d=S.ex[sub]||{c:0,t:0};const pct=d.t?Math.round(d.c/d.t*100):0;
+    return`<div class="pbr"><div class="pbn">${sub}</div><div class="pbt"><div class="pbf" style="width:${Math.round(d.t/mx*100)}%;background:${SCOL[sub]}"></div></div><div class="pbp">${d.t?pct+'%':'—'}</div></div>`;
+  }).join('');
+  document.getElementById('prog-bdg').innerHTML=BADGES.map(b=>{const e=S.earnedBadges.includes(b.id);return`<div class="bdg${e?' e':''}"><span class="bdi">${b.icon}</span><div class="bdn">${b.name}</div></div>`;}).join('');
+  document.getElementById('prog-rec').innerHTML=S.recentEx.length?S.recentEx.map(q=>`<div class="rlit"><span class="rltag">${q.sub}</span><span class="rltx">${q.correct?'✅':'❌'} ${esc(q.q)}</span></div>`).join(''):`<p style="color:var(--muted);font-size:12px;padding:6px 0">Go to Exercises to start practicing! 🎯</p>`;
+}
+
+/* ══ BADGES ══ */
+function checkBadges(){let ch=false;BADGES.forEach(b=>{if(!S.earnedBadges.includes(b.id)&&b.chk(S)){S.earnedBadges.push(b.id);ch=true;addBub('ai',`🎉 You just earned the **${b.icon} ${b.name}** badge! Incredible! 🌟`,{lessonType:'🏆 Badge!'});speak(`Amazing! You earned a new badge: ${b.name}!`);}});if(ch)saveS();}
+
+/* ══ UI ══ */
+function showTab(t){['learn','ex','prog'].forEach(id=>{document.getElementById('tab-'+id).classList.toggle('on',id===t);document.getElementById('tb-'+id).classList.toggle('on',id===t);});if(t==='prog')updProg();}
+function setDiff(d){S.diff=d;saveS();document.querySelectorAll('[data-d]').forEach(e=>e.classList.toggle('on',e.dataset.d===d));}
+function pickGrade(g){S.grade=g;S.chatHist=[];saveS();document.getElementById('glbl').textContent=g;document.querySelectorAll('#gpr .pl').forEach(e=>e.classList.toggle('on',e.dataset.g===g));}
+function closeAll(){document.querySelectorAll('.ov').forEach(o=>o.classList.remove('open'));}
+function openGrade(){document.querySelectorAll('#gpr .pl').forEach(e=>e.classList.toggle('on',e.dataset.g===S.grade));document.getElementById('ov-grade').classList.add('open');}
+function openPin(){document.getElementById('pin-inp').value='';document.getElementById('pin-err').textContent='';document.getElementById('ov-pin').classList.add('open');}
+function chkPin(){if(document.getElementById('pin-inp').value===S.pin){closeAll();openDash();}else document.getElementById('pin-err').textContent='Wrong PIN. Try again!';}
+function openDash(){
+  const tot=Object.values(S.ex).reduce((a,b)=>a+b.t,0),cor=Object.values(S.ex).reduce((a,b)=>a+b.c,0);
+  document.getElementById('d-stats').innerHTML=`<div class="sc2"><div class="sn2">${tot}</div><div class="sl2">Exercises</div></div><div class="sc2"><div class="sn2">${S.earnedBadges.length}</div><div class="sl2">Badges</div></div><div class="sc2"><div class="sn2">${S.bestStreak}</div><div class="sl2">Best Streak</div></div><div class="sc2"><div class="sn2">Gr.${S.grade}</div><div class="sl2">Grade</div></div>`;
+  document.querySelectorAll('#dpr [data-d]').forEach(e=>e.classList.toggle('on',e.dataset.d===S.diff));
+  const mx=Math.max(...Object.values(S.ex).map(e=>e.t),1);
+  document.getElementById('d-bars').innerHTML=SUBS.map(sub=>{const d=S.ex[sub]||{c:0,t:0};return`<div class="brc"><div class="brn">${sub}</div><div class="brt"><div class="brf" style="width:${Math.round(d.t/mx*100)}%;background:${SCOL[sub]}"></div></div><div class="brv">${d.t}</div></div>`;}).join('');
+  document.getElementById('ov-dash').classList.add('open');
+}
+function openChgPin(){closeAll();document.getElementById('p1').value='';document.getElementById('p2').value='';document.getElementById('chpe').textContent='';document.getElementById('ov-chpin').classList.add('open');}
+function saveChgPin(){const a=document.getElementById('p1').value,b=document.getElementById('p2').value;if(a.length!==4){document.getElementById('chpe').textContent='PIN must be 4 digits.';return;}if(a!==b){document.getElementById('chpe').textContent='PINs do not match!';return;}S.pin=a;saveS();closeAll();addBub('ai','🔒 Parent PIN updated! 😊',{});}
+
+/* ══ COPPA CONSENT ══ */
+document.getElementById('coppa-chk').addEventListener('change',function(){
+  const btn=document.getElementById('coppa-btn');btn.disabled=!this.checked;btn.style.opacity=this.checked?'1':'.5';
+});
+function acceptCoppa(){if(!document.getElementById('coppa-chk').checked)return;S.coppaConsent=true;saveS();document.getElementById('ov-coppa').classList.remove('open');startApp();}
+
+/* ══ INIT ══ */
+function startApp(){
+  document.getElementById('glbl').textContent=S.grade;
+  document.querySelectorAll('[data-d]').forEach(e=>e.classList.toggle('on',e.dataset.d===S.diff));
+  VIZ.ini();updScoreBar();updProg();
+  if('speechSynthesis' in window){speechSynthesis.getVoices();setTimeout(()=>speechSynthesis.getVoices(),700);}
+  addBub('ai',`Hi superstar! 🌟 I'm Ollie the Owl! Tap 🎤 to talk to me about anything, or go to **🎯 Exercises** for fun quizzes!`,{lessonType:'👋 Welcome'});
+  setTimeout(()=>{
+    speak(`Hi there superstar! I'm Ollie the Owl. Tap the microphone to start learning. I can help with spelling, math, science, and more!`);
+  },700);
+}
+(function init(){
+  if(S.coppaConsent){startApp();}
+  else{document.getElementById('ov-coppa').classList.add('open');}
+})();
+</script>
+</body>
+</html>

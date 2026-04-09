@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  ADD THESE KEYS TO YOUR iOS App/App/Info.plist INSIDE THE <dict> TAG.
+  These are required for microphone access and speech recognition on iPhone.
+-->
+<plist version="1.0">
+<dict>
+
+  <!-- ── REQUIRED: Microphone permission ── -->
+  <key>NSMicrophoneUsageDescription</key>
+  <string>KiddoAI needs the microphone so your child can speak answers and use the wake word to activate Ollie the Owl!</string>
+
+  <!-- ── REQUIRED: Speech recognition permission ── -->
+  <key>NSSpeechRecognitionUsageDescription</key>
+  <string>KiddoAI uses speech recognition so your child can speak their answers and have them checked by Ollie the Owl!</string>
+
+  <!-- ── Audio background mode (optional: keeps TTS alive when screen dims) ── -->
+  <key>UIBackgroundModes</key>
+  <array>
+    <string>audio</string>
+  </array>
+
+  <!-- ── Allows HTTP during development (remove for production) ── -->
+  <key>NSAppTransportSecurity</key>
+  <dict>
+    <key>NSAllowsArbitraryLoads</key>
+    <true/>
+  </dict>
+
+</dict>
+</plist>
