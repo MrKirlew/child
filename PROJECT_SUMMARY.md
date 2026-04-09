@@ -9,7 +9,16 @@
 
 | File | Entries | Date Range |
 |------|---------|------------|
-| PROJECT_SUMMARY.md | 14 | 2025-04-07 – present |
+| PROJECT_SUMMARY.md | 15 | 2025-04-07 – present |
+
+---
+
+## 2026-04-09 — Session 2 Wrap-Up (Team Child Out)
+**Member:** Dev Lead (full team)
+**Task:** Session 2: Reliability Gate 25/25 cleared (GATES.md modernized, touch targets fixed, silent catches fixed). Visual redesign from dark mono to bright "Candy Pop" kid-friendly theme. Gemini native audio TTS (Kore voice). Conversation mode. Natural prompt rewrite. Model fallback chain. Recruited Gemini API Specialist. All pushed to GitHub, CI green, Vercel + APK deployed.
+**Gate:** 25/25 CLEARED
+**Changed files:** GATES.md, www/index.html (CSS redesign + conversation mode + Gemini TTS + error fixes), api/ai/speak.js (new), api/ai/generate.js (fallback chain), server/index.js (fallback chain), SpeechPlugin.java (TTS tuning), TEAM.md (recruit)
+**Pending:** Play Store signing, WebSocket Live API exploration, dark mode toggle
 
 ---
 

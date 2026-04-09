@@ -26,6 +26,28 @@ Gate:    [X/25 CLEARED | BLOCKED]
 
 ## Log
 
+## 2026-04-09 16:30 UTC — Session Wrap-Up
+Done:
+- Reliability Gate: updated GATES.md (9 obsolete checks modernized), ran full 25-point audit, fixed 3 failures (touch targets, silent catches). 25/25 CLEARED.
+- Visual redesign: replaced dark monochrome purple with bright "Candy Pop" theme — soft gradient background, white cards, gradient buttons, per-tab colors, colorful chat bubbles, warm amber accents. Kid-friendly and visually appealing.
+- Gemini native audio: replaced robotic Android TTS with gemini-2.5-flash-preview-tts "Kore" voice via /api/ai/speak endpoint. PCM audio decoded + played via Web Audio API.
+- Conversation mode: first mic tap starts continuous conversation loop, Ollie auto-listens after speaking, second tap stops. Auto-retry on speech errors.
+- Natural prompt: updated system prompt for conversational tone (contractions, varied reactions, follow-up questions, 3-sentence max).
+- Model resilience: added 3-model fallback chain (gemini-2.5-flash → gemini-2.0-flash → gemini-2.5-flash-lite) with retry on 503/429.
+- Recruited Gemini API Specialist (member #7).
+- All changes pushed to GitHub, CI green, Vercel deployed, APK on Pixel 7 Pro.
+
+Pending:
+- Play Store production signing + submission
+- Consider WebSocket Live API (gemini-2.5-flash-native-audio-preview) for full duplex audio
+- Add more visual polish: illustrations, character animations, particle effects
+- Dark mode toggle option for evening use
+
+Next: Play Store signing and submission prep.
+Gate: 25/25 CLEARED
+
+---
+
 ## 2026-04-09 14:30 UTC — Session Wrap-Up
 Done:
 - Fixed mic button: added runtime RECORD_AUDIO permission request in SpeechPlugin.java with @PermissionCallback
