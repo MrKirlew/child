@@ -458,23 +458,55 @@ const VIZ=(()=>{
   };
 })();
 
-/* ══ TTS WITH WORD HIGHLIGHT ══ */
-let _ttel=null;
-function speak(txt,el){
+/* ══ TTS — GEMINI NATIVE AUDIO + FALLBACK ══ */
+let _ttel=null,_audioCtx=null,_audioSrc=null;
+function getAudioCtx(){if(!_audioCtx)_audioCtx=new(window.AudioContext||window.webkitAudioContext)({sampleRate:24000});return _audioCtx;}
+
+async function speak(txt,el){
   const clean=txt.replace(/[*_~`#]/g,'').substring(0,800);
   _ttel=el||null;
-  if(NB.ok){NB.call('speak',{text:clean});VIZ.start();return;}
-  if(!window.speechSynthesis)return;
+  VIZ.start();
+  // Try Gemini native TTS first
+  try{
+    const r=await fetch(window.AI_PROXY+'/ai/speak',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({text:clean,voice:'Kore'})
+    });
+    if(r.ok){
+      const d=await r.json();
+      if(d.audio){await playPCM(d.audio);return;}
+    }
+  }catch(e){}
+  // Fallback: native Android TTS or Web Speech
+  speakFallback(clean);
+}
+
+async function playPCM(base64){
+  const ctx=getAudioCtx();if(ctx.state==='suspended')await ctx.resume();
+  const raw=atob(base64);const buf=new Int16Array(raw.length/2);
+  for(let i=0;i<buf.length;i++)buf[i]=raw.charCodeAt(i*2)|(raw.charCodeAt(i*2+1)<<8);
+  const float=new Float32Array(buf.length);
+  for(let i=0;i<buf.length;i++)float[i]=buf[i]/32768;
+  const ab=ctx.createBuffer(1,float.length,24000);
+  ab.getChannelData(0).set(float);
+  if(_audioSrc){try{_audioSrc.stop();}catch(e){}}
+  _audioSrc=ctx.createBufferSource();_audioSrc.buffer=ab;_audioSrc.connect(ctx.destination);
+  _audioSrc.onended=()=>{VIZ.stop();if(_ttel)document.querySelectorAll('.word').forEach(e=>e.classList.remove('hi'));_ttel=null;autoListen();};
+  _audioSrc.start();
+}
+
+function speakFallback(clean){
+  if(NB.ok){NB.call('speak',{text:clean});return;}
+  if(!window.speechSynthesis){VIZ.stop();autoListen();return;}
   window.speechSynthesis.cancel();
   const u=new SpeechSynthesisUtterance(clean);u.rate=.95;u.pitch=1.15;
   const vv=window.speechSynthesis.getVoices();
   const pick=vv.find(v=>/google.*female|samantha|victoria|karen|moira|fiona|zira/i.test(v.name))||vv.find(v=>/google/i.test(v.name))||vv[0];
   if(pick)u.voice=pick;
-  VIZ.start();
   if(_ttel){
     const words=clean.split(/\s+/);
     _ttel.innerHTML=words.map((w,i)=>`<span class="word" id="w${i}">${esc(w)}</span>`).join(' ');
-    let wIdx=0,charPos=0;
+    let wIdx=0;
     u.onboundary=ev=>{
       if(ev.name!=='word')return;
       document.querySelectorAll('.word').forEach(e=>e.classList.remove('hi'));
@@ -485,7 +517,13 @@ function speak(txt,el){
   u.onend=u.onerror=()=>{VIZ.stop();if(_ttel)document.querySelectorAll('.word').forEach(e=>e.classList.remove('hi'));_ttel=null;autoListen();};
   window.speechSynthesis.speak(u);
 }
-function stopAll(){window.speechSynthesis&&window.speechSynthesis.cancel();if(NB.ok)NB.call('stopSpeaking');VIZ.stop();if(_ttel)document.querySelectorAll('.word').forEach(e=>e.classList.remove('hi'));_ttel=null;}
+
+function stopAll(){
+  if(_audioSrc){try{_audioSrc.stop();}catch(e){}_audioSrc=null;}
+  window.speechSynthesis&&window.speechSynthesis.cancel();
+  if(NB.ok)NB.call('stopSpeaking');
+  VIZ.stop();if(_ttel)document.querySelectorAll('.word').forEach(e=>e.classList.remove('hi'));_ttel=null;
+}
 function onAndroidTTSDone(){VIZ.stop();autoListen();}
 function autoListen(){if(_conversing&&!S.busy){setTimeout(()=>{if(_conversing)startLMic();},400);}}
 
