@@ -26,6 +26,33 @@ Gate:    [X/25 CLEARED | BLOCKED]
 
 ## Log
 
+## 2026-04-09 14:30 UTC — Session Wrap-Up
+Done:
+- Fixed mic button: added runtime RECORD_AUDIO permission request in SpeechPlugin.java with @PermissionCallback
+- Added user-visible error feedback in onAndroidSpeechError() instead of silent failure
+- Fixed AI model: swapped non-existent gemma-4-e2b-it → gemini-2.5-flash
+- Deployed proxy to Vercel (api/ai/generate.js) — eliminated firewall + mixed content issues
+- Updated AI Engineer knowledge version in TEAM.md for Google AI / Gemini
+- Implemented 6 industry standards: Gemini safety settings, CI/CD (GitHub Actions), COPPA consent gate + privacy policy, error monitoring, accessibility (ARIA/roles/focus-visible), 21 automated tests (vitest)
+- Pushed to GitHub (https://github.com/MrKirlew/child) — CI pipeline passing (test → build APK → deploy Vercel)
+- Added nightly CI schedule (daily midnight UTC)
+- Natural voice: replaced robotic Android TTS with Gemini native audio (gemini-2.5-flash-preview-tts, "Kore" voice) via /api/ai/speak endpoint
+- Continuous conversation mode: mic tap starts loop, Ollie auto-listens after speaking, second tap stops
+- Updated system prompt for natural conversational tone (contractions, varied reactions, follow-up questions)
+- Recruited Gemini API Specialist to team
+- Added model fallback chain (gemini-2.5-flash → gemini-2.0-flash → gemini-2.5-flash-lite) with retry on 503/429
+
+Pending:
+- Verify Gemini native audio voice quality on Pixel 7 Pro
+- Production app signing for Play Store submission
+- Full Reliability Gate pass (25 points)
+- Consider WebSocket Live API (gemini-2.5-flash-native-audio-preview) for full duplex audio in future
+
+Next: Test Gemini TTS voice on device, then run full Reliability Gate.
+Gate: N/A — session wrap-up
+
+---
+
 ## 2026-04-09 00:30 UTC — Session Wrap-Up
 Done:
 - Removed wake word feature entirely: deleted WWD module, onWake(), wake word UI (indicator, chip, overlay), wake word badge, wake word CSS, wake word state (wakeWord, wkCnt), wake word settings in parent dashboard

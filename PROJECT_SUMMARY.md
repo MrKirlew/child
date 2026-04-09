@@ -9,7 +9,16 @@
 
 | File | Entries | Date Range |
 |------|---------|------------|
-| PROJECT_SUMMARY.md | 12 | 2025-04-07 – present |
+| PROJECT_SUMMARY.md | 13 | 2025-04-07 – present |
+
+---
+
+## 2026-04-09 — Session Wrap-Up (Team Child Out)
+**Member:** Dev Lead (full team)
+**Task:** Major session: fixed mic (permission + error feedback), fixed AI model (gemini-2.5-flash), deployed to Vercel, implemented 6 industry standards (safety settings, CI/CD, COPPA, error monitoring, accessibility, tests), added conversation mode, replaced robotic TTS with Gemini native audio (Kore voice), recruited Gemini API Specialist, added model fallback chain with retry. Pushed to GitHub with CI passing.
+**Gate:** N/A — wrap-up
+**Changed files:** SpeechPlugin.java, MainActivity.java, www/index.html, api/ai/generate.js, api/ai/speak.js, api/errors.js, api/health.js, server/index.js, vercel.json, capacitor.config.json, AndroidManifest.xml, TEAM.md, .github/workflows/ci.yml, www/privacy.html, tests/*.test.js, package.json, .gitignore
+**Pending:** Verify Gemini TTS on device, full Reliability Gate, Play Store signing
 
 ---
 
