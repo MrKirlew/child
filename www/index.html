@@ -466,9 +466,9 @@ function speak(txt,el){
   if(NB.ok){NB.call('speak',{text:clean});VIZ.start();return;}
   if(!window.speechSynthesis)return;
   window.speechSynthesis.cancel();
-  const u=new SpeechSynthesisUtterance(clean);u.rate=.88;u.pitch=1.1;
+  const u=new SpeechSynthesisUtterance(clean);u.rate=.95;u.pitch=1.15;
   const vv=window.speechSynthesis.getVoices();
-  const pick=vv.find(v=>/female|zira|samantha|victoria|karen|moira|fiona/i.test(v.name))||vv[0];
+  const pick=vv.find(v=>/google.*female|samantha|victoria|karen|moira|fiona|zira/i.test(v.name))||vv.find(v=>/google/i.test(v.name))||vv[0];
   if(pick)u.voice=pick;
   VIZ.start();
   if(_ttel){
@@ -482,11 +482,12 @@ function speak(txt,el){
       const we=document.getElementById('w'+wIdx);if(we){we.classList.add('hi');we.scrollIntoView({block:'nearest',behavior:'smooth'});}
     };
   }
-  u.onend=u.onerror=()=>{VIZ.stop();if(_ttel)document.querySelectorAll('.word').forEach(e=>e.classList.remove('hi'));_ttel=null;};
+  u.onend=u.onerror=()=>{VIZ.stop();if(_ttel)document.querySelectorAll('.word').forEach(e=>e.classList.remove('hi'));_ttel=null;autoListen();};
   window.speechSynthesis.speak(u);
 }
 function stopAll(){window.speechSynthesis&&window.speechSynthesis.cancel();if(NB.ok)NB.call('stopSpeaking');VIZ.stop();if(_ttel)document.querySelectorAll('.word').forEach(e=>e.classList.remove('hi'));_ttel=null;}
-function onAndroidTTSDone(){VIZ.stop();}
+function onAndroidTTSDone(){VIZ.stop();autoListen();}
+function autoListen(){if(_conversing&&!S.busy){setTimeout(()=>{if(_conversing)startLMic();},400);}}
 
 /* ══ NATIVE BRIDGE HELPER ══ */
 const NB={
@@ -495,10 +496,22 @@ const NB={
 };
 
 /* ══ STT — LEARN ══ */
-let _lsr=null,_lmic=false,_speechTarget='learn';
+let _lsr=null,_lmic=false,_speechTarget='learn',_conversing=false;
 function togLMic(){
-  if(_lmic){stopLMic();return;}
-  _speechTarget='learn';
+  if(_conversing||_lmic){stopConversation();return;}
+  startConversation();
+}
+function startConversation(){
+  _conversing=true;_speechTarget='learn';
+  document.getElementById('slbl').textContent='Listening... tap 🎤 to stop';
+  startLMic();
+}
+function stopConversation(){
+  _conversing=false;stopLMic();
+  document.getElementById('slbl').textContent='Tap 🎤 to talk to Ollie';
+}
+function startLMic(){
+  if(!_conversing)return;
   if(NB.ok){_lmic=true;micUI('lmic',true);NB.call('startListening');return;}
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
   if(!SR){document.getElementById('slbl').textContent='Speech not available. Try Chrome.';return;}
@@ -509,7 +522,7 @@ function togLMic(){
   _lsr.start();
 }
 function stopLMic(){_lsr&&_lsr.stop();_lsr=null;_lmic=false;micUI('lmic',false);}
-function micUI(id,on){const b=document.getElementById(id);if(!b)return;b.textContent=on?'⏹':'🎤';b.className=on?'on':'';}
+function micUI(id,on){const b=document.getElementById(id);if(!b)return;if(id==='lmic'&&_conversing){b.textContent='⏹';b.className='on';return;}b.textContent=on?'⏹':'🎤';b.className=on?'on':'';}
 function onAndroidSpeechResult(t){
   if(_speechTarget==='exercise'){stopEMic();document.getElementById('vatr').textContent=t;handleVoiceAns(t);}
   else{stopLMic();sendL(t);}
@@ -518,7 +531,11 @@ function onAndroidSpeechError(reason){
   const msg=reason||"Couldn't hear you — tap 🎤 to try again";
   reportError('speech',msg,_speechTarget);
   if(_speechTarget==='exercise'){stopEMic();document.getElementById('vatr').textContent=msg;}
-  else{stopLMic();document.getElementById('slbl').textContent=msg;}
+  else{
+    stopLMic();
+    if(_conversing){document.getElementById('slbl').textContent='Listening... tap 🎤 to stop';setTimeout(()=>{if(_conversing)startLMic();},800);}
+    else{document.getElementById('slbl').textContent=msg;}
+  }
 }
 
 /* ══ STT — EXERCISE ══ */
@@ -579,10 +596,12 @@ You handle ALL subjects naturally based on what the child talks about:
 - Engineering: ${SN.Engineering}
 - Math: ${SN.Math}
 
-Rules: Speak directly. Short age-appropriate. ONE question at a time. Celebrate effort. Use emojis ✨.
+Voice & Tone: Talk like a friendly, excited real person — use contractions (you're, let's, that's), short punchy sentences, excited reactions ("Ooh!", "Wow!", "Nice one!"), and playful language. NEVER sound like a textbook. Vary your reactions — don't repeat the same praise. Ask follow-up questions to keep the conversation going naturally.
+Rules: ONE idea at a time. Keep responses under 3 sentences so they sound natural when spoken aloud. Celebrate effort with variety. Use emojis sparingly in text.
 Detect the subject from what the child says. If unclear, ask what they'd like to learn about or suggest something fun.
 For spelling: put word sound chunks in phonics array.
 For comprehension: put reading passage in "passage" field first message only.
+Always end with a question or prompt to keep the child talking.
 Return ONLY valid JSON: {"message":"...","phonics":[],"passage":"","lessonType":"Teaching|Practice|Quiz|Comprehension|Spelling|Math","detectedSubject":"Spelling|Grammar|Comprehension|Science|Technology|Engineering|Math"}`;}
 
 async function callAI(userMsg,hist){

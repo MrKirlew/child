@@ -47,8 +47,8 @@ public class SpeechPlugin extends Plugin {
             Log.w(TAG, "TTS init status: " + status);
             if (status == TextToSpeech.SUCCESS) {
                 tts.setLanguage(Locale.US);
-                tts.setPitch(1.1f);
-                tts.setSpeechRate(0.88f);
+                tts.setPitch(1.15f);
+                tts.setSpeechRate(0.95f);
             }
         });
 
