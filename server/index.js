@@ -9,8 +9,8 @@ require('fs').readFileSync(__dirname + '/.env', 'utf8').split('\n').forEach(line
 
 const API_KEY = process.env.GOOGLE_AI_KEY;
 const PORT = process.env.PORT || 3456;
-const MODEL = 'gemini-2.5-flash';
-const BASE = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;
+const MODELS = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-2.5-flash-lite'];
+const API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
 
 // Child-safe content filtering — block at lowest threshold
 const SAFETY = [
@@ -23,30 +23,40 @@ const SAFETY = [
 app.use(cors());
 app.use(express.json({ limit: '1mb' }));
 
-// Health check
-app.get('/health', (_, res) => res.json({ ok: true, model: MODEL }));
+app.get('/health', (_, res) => res.json({ ok: true, models: MODELS }));
 
-// AI proxy — accepts same body as Google AI, adds the key server-side
 app.post('/ai/generate', async (req, res) => {
   if (!API_KEY) return res.status(500).json({ error: 'API key not configured' });
+  const body = { ...req.body, safetySettings: SAFETY };
 
-  try {
-    const r = await fetch(`${BASE}?key=${API_KEY}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...req.body, safetySettings: SAFETY })
-    });
-    const data = await r.json();
-    if (!r.ok) return res.status(r.status).json(data);
-    res.json(data);
-  } catch (e) {
-    console.error('[proxy]', e.message);
-    res.status(502).json({ error: 'Upstream error' });
+  for (const model of MODELS) {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const r = await fetch(`${API_BASE}/${model}:generateContent?key=${API_KEY}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+        const data = await r.json();
+        if (r.ok) return res.json(data);
+        if (r.status === 503 || r.status === 429) {
+          console.log(`[proxy] ${model} returned ${r.status}, ${attempt === 0 ? 'retrying...' : 'trying next model'}`);
+          if (attempt === 0) await new Promise(r => setTimeout(r, 500));
+          continue;
+        }
+        return res.status(r.status).json(data);
+      } catch (e) {
+        console.error(`[proxy] ${model} error:`, e.message);
+        if (attempt === 0) continue;
+      }
+    }
   }
+
+  res.status(503).json({ error: 'All models unavailable. Please try again in a moment.' });
 });
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`KiddoAI proxy running on port ${PORT}`);
-  console.log(`Model: ${MODEL}`);
+  console.log(`Models: ${MODELS.join(' → ')}`);
   console.log(`Test: curl http://localhost:${PORT}/health`);
 });

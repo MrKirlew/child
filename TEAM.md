@@ -28,6 +28,7 @@
 | Security Auditor | Privacy regs | COPPA 2025 Final Rule Amendments · GDPR-K · App Store 2025 | 2026-04-07 |
 | UX Guardian | Design system | KiddoAI DS v3 | 2026-04-07 |
 | QA Lead | Test matrix | Chrome 147 (Android .49 / iOS .47 / Win .55/.56 / Desktop .55) · Edge ✅ · Safari 18 ⚠️ · Firefox ❌ | 2026-04-07 |
+| Gemini API Specialist | Google Generative AI | API v1beta · Gemini 2.5 Flash/Pro/Lite · gemma-3/4 · Safety & quota | 2026-04-09 |
 
 *Recruited members are appended below by RECRUIT.md protocol.*
 
@@ -35,6 +36,10 @@
 
 ## Recruited Members
 *(Added by `Team Child Recruit` — see RECRUIT.md)*
+
+| # | Member | Role | Core Domain | Recruited |
+|---|--------|------|-------------|-----------|
+| 7 | **Gemini API Specialist** | AI Model Ops | Google Generative AI API, model fallback, retry logic, safety filters | 2026-04-09 |
 
 ---
 
