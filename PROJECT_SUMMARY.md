@@ -9,7 +9,16 @@
 
 | File | Entries | Date Range |
 |------|---------|------------|
-| PROJECT_SUMMARY.md | 13 | 2025-04-07 – present |
+| PROJECT_SUMMARY.md | 14 | 2025-04-07 – present |
+
+---
+
+## 2026-04-09 — Reliability Gate 25/25 CLEARED
+**Member:** QA Lead (full team audit)
+**Task:** Updated GATES.md §2 — replaced 9 obsolete checks (wake word, Anthropic API, 3D models, story gen, sound effects, children profiles) with current-app checks (Gemini TTS, conversation mode, COPPA gate, comprehension passages, visual feedback, Google AI). Ran full 25-point audit. Fixed 3 failures: touch targets below 44px (#stopb 38→44, #exmic 42→44, .hico 34→44), silent catch blocks (added reportError). All 25 points pass. 21 automated tests still green.
+**Gate:** 25/25 CLEARED
+**Changed files:** GATES.md, www/index.html (touch targets + error logging)
+**Pending:** None — gate cleared
 
 ---
 

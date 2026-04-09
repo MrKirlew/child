@@ -37,20 +37,20 @@ Any ❌ must be fixed and re-checked before closing the task.
 **Code Quality (1–6)**
 1. No unhandled promise rejections or uncaught errors
 2. All `fetch()` calls have try/catch with user-visible fallback
-3. API key reads from `window.ANTHROPIC_API_KEY` — never hardcoded
-4. No `console.error` silently swallowed
+3. API key is server-side only (Vercel env / .env) — never in client code
+4. No `catch` blocks that silently swallow errors without logging
 5. All DOM IDs referenced in JS exist in HTML
 6. No blocking synchronous operations on main thread
 
 **Feature Completeness (7–14)**
-7. TTS speaks and Ollie's beak animates in sync
-8. Wake word detection starts after welcome speech ends
+7. Gemini TTS audio plays and visualizer animates in sync
+8. Conversation mode auto-listens after TTS finishes
 9. STT mic transcribes and sends correctly
 10. Exercise generates for current subject + grade + difficulty
 11. Voice answer checking returns correct/incorrect + feedback
-12. Story generates with child's name woven in
-13. 3D model loads and rotates for all 4 STEM subjects
-14. Sound effects fire for: correct, wrong, challenge, badge, story, wake
+12. Comprehension passages generate with reading questions
+13. Exercise types (MC, fill-blank, voice) render correctly for all 7 subjects
+14. Visual feedback fires for: correct (bounce), wrong (shake), badge (glow), streak (fire emoji)
 
 **UX & State (15–20)**
 15. Tab bar animations trigger on select and hover
@@ -58,7 +58,7 @@ Any ❌ must be fixed and re-checked before closing the task.
 17. Streak increments and resets correctly
 18. Badge fires exactly once per unlock (no duplicates)
 19. Parent dashboard PIN gate works
-20. Children profiles save, load, delete without errors
+20. COPPA consent gate shows on first launch, blocks app until parent consents
 
 **Platform (21–23)**
 21. Layout fits 375px width without horizontal scroll
@@ -66,8 +66,8 @@ Any ❌ must be fixed and re-checked before closing the task.
 23. No `position: fixed` that breaks in Capacitor WebView
 
 **Security & Privacy (24–25)**
-24. No child name or session data sent to any third party except Anthropic
-25. `anthropic-dangerous-direct-browser-access` header only in dev; prod uses proxy
+24. No child name or session data sent to any third party except Google AI
+25. All AI calls route through Vercel proxy; no direct client-to-API calls in prod
 
 **Gate output:**
 ```
