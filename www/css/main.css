@@ -255,8 +255,6 @@ body.mode-night .owl-t #osv{animation-duration:1s}
 body.mode-night #spell-card{background:#16213E;border-color:#0F3460}
 body.mode-night .sp-letter{background:linear-gradient(135deg,#1A1A2E,#16213E);border-color:#0F3460;color:#9BA1FF}
 body.mode-night .sp-hist{background:#1A1A2E}
-body.mode-night #challenge-card{background:linear-gradient(135deg,#1A1A2E,#16213E);border-color:#0F3460}
-body.mode-night #ch-timer{color:#FDE68A}
 body.mode-night #rstbtn{background:rgba(248,113,113,.06);border-color:rgba(248,113,113,.2)}
 
 /* Accessibility: focus outlines for keyboard navigation */

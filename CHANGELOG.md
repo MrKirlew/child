@@ -12,7 +12,8 @@ Format: `- [type] description` — types: `feat`, `fix`, `refactor`, `chore`
 - [fix] Spell history: tapping a saved word shows cached result and speaks via REST — no duplicate API call or history entry
 - [fix] Badge TTS: badge announcements use REST TTS instead of creating Learn tab conversation bubbles
 - [feat] speakDirect() function: REST-only TTS with sentence-boundary chunking per CLAUDE.md standards
-- [feat] Spelling Challenge: "Challenge Me!" button — AI picks a grade-appropriate word, child has 3 minutes to spell it, then sees the word, definition, and phonetic breakdown
+- [feat] Spell Center: phonetic pronunciation guide added to every word lookup (letters + meaning + "how to say it")
+- [feat] Spell Center: mic button — say a word out loud and Ollie teaches it (Android native + Web Speech API)
 - [refactor] Split www/index.html (898→322 lines) into www/css/main.css + www/js/{ai,speech,exercises,progress,ui}.js
 - [fix] SHA-256 PIN hashing — parent PIN stored as hash, never plain text. Auto-migrates existing PINs.
 - [fix] health.js makes real Gemini API ping with 8s timeout instead of static 200

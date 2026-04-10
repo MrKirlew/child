@@ -48,8 +48,7 @@ module.exports = [
         closeAll: 'readonly', openGrade: 'readonly', openPin: 'readonly',
         chkPin: 'readonly', openDash: 'readonly', openChgPin: 'readonly', saveChgPin: 'readonly',
         acceptCoppa: 'readonly', startApp: 'readonly', setListenWait: 'readonly',
-        sendTyped: 'readonly', spellWord: 'readonly', showSpellResult: 'readonly',
-        startChallenge: 'readonly', hearChallenge: 'readonly', submitChallenge: 'readonly', resetChallenge: 'readonly',
+        sendTyped: 'readonly', spellWord: 'readonly', showSpellResult: 'readonly', togSpellMic: 'readonly',
         setMode: 'readonly',
         // Web APIs not in globals.browser
         SpeechRecognition: 'readonly', webkitSpeechRecognition: 'readonly',

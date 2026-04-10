@@ -483,12 +483,20 @@ function togExMic() {
 }
 function stopEMic() { if (_esr) _esr.stop(); _esr = null; _emic = false; micUI('exmic', false); }
 
-// Android speech callbacks (exercise tab only now)
+// Android speech callbacks
 function onAndroidSpeechResult(t) {
+  // Spell tab mic
+  if (window._spellMicActive) {
+    window._spellMicActive = false;
+    const word = (t || '').trim();
+    if (word) { document.getElementById('spell-inp').value = word; spellWord(); }
+    return;
+  }
   if (_speechTarget === 'exercise') { stopEMic(); document.getElementById('vatr').textContent = t; handleVoiceAns(t); }
 }
 function onAndroidSpeechError(reason) {
   const msg = reason || "Couldn't hear you";
   reportError('speech', msg, _speechTarget);
+  if (window._spellMicActive) { window._spellMicActive = false; return; }
   if (_speechTarget === 'exercise') { stopEMic(); document.getElementById('vatr').textContent = msg; }
 }
