@@ -106,6 +106,101 @@ function showSpellResult(idx) {
   speakDirect(`${word}. ${letters.join(', ')}. ${word}. ${meaning}`);
 }
 
+/* ══ SPELLING CHALLENGE ══ */
+let _chWord = null; // {word, letters, meaning, phonics}
+let _chTimer = null;
+let _chSeconds = 180;
+
+async function startChallenge() {
+  document.getElementById('ch-start').style.display = 'none';
+  document.getElementById('ch-result').style.display = 'none';
+  document.getElementById('ch-active').style.display = 'block';
+  document.getElementById('ch-inp').value = '';
+  document.getElementById('ch-submit').disabled = true;
+  document.getElementById('ch-hint').textContent = 'Ollie is picking a word...';
+  document.getElementById('ch-hear').disabled = true;
+  _chWord = null;
+  try {
+    const prompt = `Pick ONE spelling word appropriate for a ${S.grade === 'K' ? 'kindergartner' : 'grade ' + S.grade + ' student'}, difficulty ${S.diff}. Return ONLY JSON: {"word":"example","letters":["e","x","a","m","p","l","e"],"meaning":"A short kid-friendly definition.","phonics":"Break the word into sounds: ex-am-ple (eg-ZAM-pull). Explain how to sound it out."}`;
+    const raw = await aiGenerate(prompt, '', 200);
+    let r;
+    try { r = JSON.parse(raw.replace(/```json|```/g, '').trim()); } catch (_e) { r = { word: 'cat', letters: ['c', 'a', 't'], meaning: 'A small furry pet.', phonics: 'Sound it out: c-a-t (KAT).' }; }
+    _chWord = r;
+    document.getElementById('ch-hint').textContent = 'Listen carefully and type the word!';
+    document.getElementById('ch-submit').disabled = false;
+    document.getElementById('ch-hear').disabled = false;
+    document.getElementById('ch-inp').focus();
+    speakDirect(`Can you spell this word? ${r.word}. ${r.word}.`);
+    // Start 3-minute timer
+    _chSeconds = 180;
+    _updateChTimer();
+    _chTimer = setInterval(() => {
+      _chSeconds--;
+      _updateChTimer();
+      if (_chSeconds <= 0) { clearInterval(_chTimer); _chTimer = null; submitChallenge(); }
+    }, 1000);
+  } catch (_e) {
+    document.getElementById('ch-hint').textContent = 'Could not pick a word. Try again!';
+    document.getElementById('ch-start').style.display = 'block';
+    document.getElementById('ch-active').style.display = 'none';
+  }
+}
+
+function _updateChTimer() {
+  const m = Math.floor(_chSeconds / 60);
+  const s = _chSeconds % 60;
+  document.getElementById('ch-timer').textContent = m + ':' + String(s).padStart(2, '0');
+  if (_chSeconds <= 30) document.getElementById('ch-timer').style.color = '#EF4444';
+  else document.getElementById('ch-timer').style.color = '#D97706';
+}
+
+function hearChallenge() {
+  if (_chWord) speakDirect(`${_chWord.word}. ${_chWord.word}.`);
+}
+
+function submitChallenge() {
+  if (!_chWord) return;
+  if (_chTimer) { clearInterval(_chTimer); _chTimer = null; }
+  const given = document.getElementById('ch-inp').value.trim().toLowerCase();
+  const correct = _chWord.word.toLowerCase();
+  const ok = given === correct;
+  // Show result
+  document.getElementById('ch-active').style.display = 'none';
+  document.getElementById('ch-result').style.display = 'block';
+  const v = document.getElementById('ch-verdict');
+  if (!given) {
+    v.textContent = "⏰ Time's up!";
+    v.style.background = 'rgba(245,158,11,.12)'; v.style.color = '#D97706';
+  } else if (ok) {
+    v.textContent = '✅ You got it! Amazing!';
+    v.style.background = 'rgba(34,197,94,.12)'; v.style.color = '#16A34A';
+  } else {
+    v.textContent = '❌ Not quite! The word is:';
+    v.style.background = 'rgba(239,68,68,.1)'; v.style.color = '#DC2626';
+  }
+  const w = _chWord;
+  document.getElementById('ch-word').textContent = w.word;
+  document.getElementById('ch-letters').innerHTML = (w.letters || w.word.split('')).map(l => `<div class="sp-letter">${esc(l)}</div>`).join('');
+  document.getElementById('ch-meaning').innerHTML = '<strong>📖 Meaning:</strong> ' + esc(w.meaning || '');
+  document.getElementById('ch-phonics').innerHTML = '<strong>🔤 How to say it:</strong> ' + esc(w.phonics || '');
+  // Speak the result
+  const spk = ok
+    ? `Great job! You spelled ${w.word} correctly! ${w.word} means: ${w.meaning || ''}`
+    : `The word is ${w.word}. ${(w.letters || w.word.split('')).join(', ')}. ${w.word}. It means: ${w.meaning || ''}. ${w.phonics || ''}`;
+  speakDirect(spk);
+  // Add to history + track badge
+  _spellHistory.unshift({ word: w.word, letters: w.letters || w.word.split(''), meaning: w.meaning || '' });
+  if (_spellHistory.length > 20) _spellHistory.pop();
+  _saveSpellHistory(); _renderSpellHistory();
+  S.cnt.Spelling = (S.cnt.Spelling || 0) + 1; saveS(); checkBadges();
+}
+
+function resetChallenge() {
+  document.getElementById('ch-result').style.display = 'none';
+  document.getElementById('ch-start').style.display = 'block';
+  _chWord = null;
+}
+
 function _renderSpellHistory() {
   const el = document.getElementById('spell-history');
   if (!_spellHistory.length) { el.innerHTML = '<p style="color:var(--muted);font-size:12px;padding:6px 0">Type a word above to get started!</p>'; return; }
