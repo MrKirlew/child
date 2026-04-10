@@ -1,14 +1,84 @@
-node_modules/
-server/.env
-server/node_modules/
-*.apk
+# ============================================================
+# KiddoAI — Master .gitignore
+# Merged from: root / server / android originals + security additions
+# Place this file at the project root only — one file covers all
+# ============================================================
+
+# --- Secrets & Environment ---
 .env
 .env.*
-.vercel
-.idea/
-*.iml
-.DS_Store
-android/app/build/
-/tmp/
+.env.local
+server/.env
+*.key
+google-services.json
+
+# --- Android Signing (NEVER commit — losing this = can never update the app) ---
+*.jks
+*.keystore
+android/app/release/
+android/keystore/
+
+# --- Node ---
+node_modules/
+server/node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# --- Logs ---
+logs/
 *.log
+/tmp/
+
+# --- Capacitor / Android build artifacts ---
+android/app/build/
+android/.gradle/
+android/build/
+android/local.properties
+android/capacitor-cordova-android-plugins/build/
+*.apk
+*.aab
+*.iml
+
+# --- iOS build artifacts ---
+ios/App/Pods/
+ios/App/App.xcworkspace/xcuserdata/
+*.ipa
+
+# --- Claude Code local settings (contains IPs + tool permissions — never commit) ---
+settings_local.json
 .claude/
+
+# --- Vercel ---
+.vercel/
+
+# --- Test coverage ---
+coverage/
+.nyc_output/
+
+# --- Editor ---
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# --- macOS ---
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# --- Android IDE ---
+android/.project
+android/.settings/
+android/app/.classpath
+android/app/.project
+android/app/.settings/
+
+# --- Misc ---
+*.tmp
+*.swp
+*.zip
+memory.db
+.eslintrc.json

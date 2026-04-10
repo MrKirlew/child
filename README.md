@@ -1,204 +1,198 @@
-# 🌟 KiddoAI Tutor v2 — iOS & Android
+# 🌟 KiddoAI Tutor — iOS & Android
 
-An AI-powered educational app for kids with voice interaction, interactive exercises,
-progress tracking, and reading comprehension. Works on **both iPhone and Android**.
+An AI-powered educational app for kids (K-6) with voice interaction, interactive exercises,
+progress tracking, and reading comprehension. Built with Capacitor for both iPhone and Android.
+
+**AI:** Google Gemini 2.5 Flash via Vercel serverless proxy
+**Voice:** Gemini native TTS (Kore voice) + Android SpeechRecognizer
+**Backend:** Vercel (`https://forthechild.vercel.app`)
 
 ---
 
-## ✨ What's New in v2
+## ✨ Features
 
 | Feature | Details |
 |---------|---------|
-| 🎯 **Exercises Tab** | AI-generated multiple choice, fill-in-blank, voice answer quizzes |
-| 📊 **Progress Tab** | Session scores, accuracy, streak counter with 🔥, badges |
-| 🔊 **Word-by-Word TTS** | Ollie highlights each word as he reads it |
-| 🎤 **Voice Answer Checking** | Speak your answer — AI checks if it's correct |
+| 🤖 **Ollie the Owl** | Animated AI tutor — blinking eyes, talking beak, rainbow audio visualizer |
+| 🎯 **Exercises Tab** | AI-generated multiple choice, fill-in-blank, and voice answer quizzes |
+| 📊 **Progress Tab** | Session scores, accuracy %, streak counter 🔥, 12 subject badges |
+| 🔊 **Gemini TTS** | Natural-sounding Kore voice replaces robotic Android TTS |
+| 🎤 **Conversation Mode** | Tap mic → Ollie listens → responds → auto-listens again. Tap again to stop. |
 | 📚 **Reading Comprehension** | Passages with comprehension Q&A via voice |
-| 🔥 **Streak System** | Consecutive correct answers build your streak |
-| 🏆 **12 Badges** | Earn badges for each subject and milestone |
+| 👨‍👩‍👧 **Parent Dashboard** | PIN-protected: activity stats, difficulty setting |
 
 ---
 
-## 🚀 Quick Start — Both Platforms (Capacitor)
+## 🏗️ Architecture
 
-### Prerequisites
-- **Node.js** 18+ (https://nodejs.org)
-- **Android Studio** (for Android)
-- **Xcode 15+** (for iOS — Mac only)
-
-### Step 1 — Add Your API Key
-
-Edit `www/index.html` and find this line near the bottom of the `<script>` section.
-The app reads `window.ANTHROPIC_API_KEY`. You need to inject it.
-
-**Option A — Capacitor plugin (recommended):**
-Use `@capacitor-community/http` or a secure storage plugin to inject the key at runtime.
-
-**Option B — Temporary (dev/family use only):**
-Add this line inside `<script>` in `www/index.html`:
-```javascript
-window.ANTHROPIC_API_KEY = 'sk-ant-your-key-here';
+```
+Browser / Android WebView
+        │
+        ▼
+  www/index.html  (app shell + UI)
+  www/js/         (feature modules — ai.js, speech.js, exercises.js, etc.)
+  www/css/        (styles)
+        │
+        │  HTTPS fetch
+        ▼
+  Vercel Serverless (forthechild.vercel.app)
+  ├── api/ai/generate.js   ← chat + exercises (3-model fallback)
+  ├── api/ai/speak.js      ← Gemini TTS (Kore voice)
+  └── api/health.js        ← CI health check
+        │
+        │  Google AI API
+        ▼
+  gemini-2.5-flash  →  gemini-2.0-flash (fallback)  →  gemini-2.5-flash-lite (fallback)
 ```
 
-Get your key at: https://console.anthropic.com
+**No API keys in client code.** The Vercel proxy holds `GOOGLE_AI_KEY` as an environment variable.
 
-> ⚠️ For App Store / Play Store submission: use a backend proxy instead of
-> embedding the key. Set up a free server on Railway/Render/Vercel that
-> calls the Anthropic API on behalf of your app.
+---
 
-### Step 2 — Install Capacitor
+## 🚀 Quick Start
+
+### Prerequisites
+- **Node.js** 18+ — https://nodejs.org
+- **Android Studio** (for Android builds)
+- **Xcode 15+** (for iOS — Mac only)
+- A **Vercel account** with `GOOGLE_AI_KEY` set (or use the deployed proxy at `forthechild.vercel.app`)
+
+### Step 1 — Clone and install
 ```bash
-cd KiddoAI_v2
+git clone https://github.com/MrKirlew/child.git
+cd child
 npm install
 ```
 
-### Step 3 — Add Platforms
-```bash
-# Android
-npm run cap:add:android
-
-# iOS (Mac only)
-npm run cap:add:ios
+### Step 2 — Set up environment (local dev only)
+Create `.env.local` (gitignored):
 ```
+GOOGLE_AI_KEY=your-google-ai-key-here
+LOCAL_PROXY_PORT=3456
+```
+Get a key at: https://aistudio.google.com
 
-### Step 4 — Sync Your Web App
+### Step 3 — Sync and build
 ```bash
-npm run cap:sync
+npm run build        # lint + test + cap sync
 ```
 
 ---
 
 ## 📱 Android Build
 
-### 1. Open in Android Studio
+### Open in Android Studio
 ```bash
 npm run cap:open:android
 ```
 
-### 2. Add Permissions to AndroidManifest.xml
-In `android/app/src/main/AndroidManifest.xml`, add inside `<manifest>`:
-```xml
-<uses-permission android:name="android.permission.INTERNET" />
-<uses-permission android:name="android.permission.RECORD_AUDIO" />
-```
-
-### 3. Run on Device or Emulator
-- Connect your Android phone via USB (enable USB Debugging in Developer Options)
-- Click the green ▶ **Run** button in Android Studio
-
-### 4. Build Release APK
+### Build debug APK
 ```bash
-# In Android Studio: Build → Generate Signed Bundle/APK
-# Or from command line:
-cd android
-./gradlew assembleRelease
+cd android && ./gradlew assembleDebug
+adb install app/build/outputs/apk/debug/app-debug.apk
 ```
+
+### Build release AAB (Play Store)
+```
+Android Studio → Build → Generate Signed Bundle/APK → Android App Bundle
+```
+> ⚠️ Store your `.jks` keystore file **outside** the repo. Never commit it.
 
 ---
 
-## 🍎 iOS Build (Mac Required)
+## 🍎 iOS Build (Mac only)
 
-### 1. Open in Xcode
 ```bash
 npm run cap:open:ios
 ```
 
-### 2. Add Permissions to Info.plist
-Open `ios/App/App/Info.plist` in Xcode.
-Add the keys from `ios-info-plist-additions.xml`:
+Add to `ios/App/App/Info.plist`:
 - `NSMicrophoneUsageDescription`
 - `NSSpeechRecognitionUsageDescription`
 
-Or in Xcode: Select the project → Info tab → Add these keys with the descriptions.
-
-### 3. Set Your Team
-In Xcode: Select project → Signing & Capabilities → set your Apple Developer Team.
-
-### 4. Run on iPhone
-- Connect your iPhone via USB
-- Select it from the device dropdown
-- Click ▶ Run
-
-### 5. Archive for App Store
-```
-Xcode → Product → Archive → Distribute App
-```
+Then: `Xcode → Product → Archive → Distribute App`
 
 ---
 
-## 🎮 App Features
+## 🔧 Development Scripts
 
-### 📚 Learn Tab
-- **Ollie the Owl** — animated with blinking eyes, talking beak, rainbow visualizer
-- **Wake Word** — say "hey ollie" (or custom phrase) to activate lessons
-- **Word Highlighting** — Ollie highlights each word as he reads for reading comprehension
-- **7 Subjects** × **4 Difficulty Levels** × **7 Grade Levels** (K–6)
-- **Phonics Tiles** — golden letter tiles for spelling/reading words
-
-### 🎯 Exercises Tab
-- **Multiple Choice** — tap A/B/C/D or say "A", "B", "C", or "D"
-- **Fill in the Blank** — type or speak the missing word
-- **Voice Answer** — speak your answer for Reading & Grammar
-- **Immediate Feedback** — green bounce for correct, red shake for wrong
-- **Streak Counter** — build consecutive correct answers for 🔥🔥🔥
-- **Session Score** — tracks correct/total/accuracy/best streak
-
-### 📊 Progress Tab
-- **Session Stats** — total exercises, correct answers, accuracy %
-- **🔥 Streak Card** — current streak + best streak with fire animation
-- **Subject Bars** — accuracy breakdown per subject
-- **12 Badges** — earn by mastering subjects and building streaks
-- **Recent History** — last 12 exercises with ✅/❌
-
-### 👨‍👩‍👧 Parent Dashboard (PIN: 1234)
-- Set custom wake word
-- View activity stats and subject breakdown
-- Change PIN
-- Progress snapshot
+| Script | Purpose |
+|--------|---------|
+| `npm test` | Run all vitest tests |
+| `npm run test:watch` | Vitest in watch mode |
+| `npm run test:snap` | Update snapshot tests (review diff first) |
+| `npm run lint` | ESLint all JS files |
+| `npm run lint:fix` | ESLint with auto-fix |
+| `npm run build` | lint + test + cap sync (run before every commit) |
+| `npm run secret:scan` | Scan for accidental secrets in source |
 
 ---
 
 ## 📁 Project Structure
-```
-KiddoAI_v2/
-├── www/
-│   └── index.html          ← Complete app (HTML/CSS/JS)
-├── capacitor.config.json   ← iOS + Android config
-├── package.json            ← Capacitor dependencies
-├── ios-info-plist-additions.xml  ← iOS permissions guide
-└── README.md
 
-After running cap:add:
+```
+forthechild/
+├── www/
+│   ├── index.html          ← App shell (HTML structure only)
+│   ├── js/
+│   │   ├── ai.js           ← Gemini calls, fallback chain, prompt cache
+│   │   ├── speech.js       ← STT/TTS bridge
+│   │   ├── exercises.js    ← Exercise generation, scoring, streaks
+│   │   ├── progress.js     ← Progress tracking, badges
+│   │   └── ui.js           ← DOM helpers, tab routing, animations
+│   ├── css/
+│   │   └── main.css        ← Candy Pop theme, layout
+│   └── privacy.html        ← COPPA privacy policy
+├── api/
+│   ├── ai/generate.js      ← Vercel fn: chat + exercises
+│   ├── ai/speak.js         ← Vercel fn: Gemini TTS
+│   ├── health.js           ← Vercel fn: health check
+│   └── errors.js           ← Shared error formatting
+├── server/index.js         ← Local dev proxy
 ├── android/                ← Android Studio project
-└── ios/                    ← Xcode project
+├── ios/                    ← Xcode project
+├── tests/                  ← Vitest tests
+├── .github/workflows/ci.yml
+├── capacitor.config.json
+├── vercel.json
+├── package.json
+├── .eslintrc.json
+├── CHANGELOG.md
+└── .gitignore
 ```
 
 ---
 
-## 🔧 Voice Features by Platform
+## 🔒 Security Notes
 
-| Feature | Android (Chrome WebView) | iOS (WKWebView/Safari) |
-|---------|--------------------------|------------------------|
-| TTS | ✅ speechSynthesis | ✅ speechSynthesis |
-| STT Wake Word | ✅ webkitSpeechRecognition | ⚠️ Limited (see note) |
-| STT Mic Button | ✅ Full | ✅ webkitSpeechRecognition |
-| Word Highlighting | ✅ | ✅ |
-
-> **iOS Wake Word Note:** Continuous background speech recognition requires
-> the native `SFSpeechRecognizer` API via a Capacitor plugin. The tap-to-speak
-> mic button works perfectly on iOS. For background wake word on iOS, consider
-> adding the `capacitor-voice-recorder` or a custom native plugin.
+- **No API keys in client code** — ever. Keys live in Vercel env vars only.
+- **PIN storage** — parent PIN stored as SHA-256 hash in `localStorage`. Plain PIN never stored.
+- **COPPA** — no PII leaves the device. Vercel logs metadata only, never message content.
+- Run `npm run secret:scan` before every push.
 
 ---
 
 ## 🛒 Publishing
 
 ### Google Play Store
-1. Generate signed AAB: `Build → Generate Signed Bundle`
-2. Create account: https://play.google.com/console ($25 one-time)
-3. Upload and fill store listing
+1. Generate signed AAB in Android Studio (`targetSdk 34` required)
+2. https://play.google.com/console ($25 one-time)
+3. Content rating: **Everyone / child-directed**
+4. Link to deployed `privacy.html` for privacy policy
 
 ### Apple App Store
-1. Archive in Xcode: `Product → Archive`
-2. Create account: https://developer.apple.com ($99/year)
-3. Submit via App Store Connect
+1. Xcode → Archive → Distribute App
+2. https://developer.apple.com ($99/year)
+3. Content rating: **4+**
+4. Privacy nutrition label: declare microphone usage
+
+---
+
+## 📋 CI / CD
+
+GitHub Actions runs on every push + nightly:
+1. `npm run lint`
+2. `npm test`
+3. `./gradlew assembleDebug`
+4. `vercel --prod`
+5. `curl -f https://forthechild.vercel.app/api/health` — must pass or deploy rolls back

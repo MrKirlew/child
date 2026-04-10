@@ -1,25 +1,35 @@
 {
   "name": "kiddoai-tutor",
   "version": "1.0.0",
-  "description": "KiddoAI Tutor - Educational app for kids",
+  "description": "KiddoAI Tutor - AI-powered educational app for kids (K-6)",
   "scripts": {
     "test": "vitest run",
-    "build": "echo 'No build step needed - pure HTML'",
+    "test:watch": "vitest",
+    "test:snap": "vitest --update-snapshots",
+    "lint": "eslint 'www/js/**/*.js' 'api/**/*.js' 'server/*.js'",
+    "lint:fix": "eslint --fix 'www/js/**/*.js' 'api/**/*.js' 'server/*.js'",
+    "build": "npm run lint && npm run test && npx cap sync",
     "cap:add:android": "npx cap add android",
     "cap:add:ios": "npx cap add ios",
     "cap:sync": "npx cap sync",
     "cap:open:android": "npx cap open android",
     "cap:open:ios": "npx cap open ios",
     "cap:run:android": "npx cap run android",
-    "cap:run:ios": "npx cap run ios"
+    "cap:run:ios": "npx cap run ios",
+    "secret:scan": "git grep -E \"(sk-|AIza|192\\.168|password|1234)\" -- . ':(exclude)*.md' ':(exclude)CHANGELOG.md'"
   },
   "dependencies": {
-    "@capacitor/core": "^5.7.0"
+    "@capacitor/core": "^7.0.0"
   },
   "devDependencies": {
-    "@capacitor/android": "^5.7.0",
-    "@capacitor/cli": "^5.7.0",
-    "@capacitor/ios": "^5.7.0",
-    "vitest": "^4.1.4"
+    "@capacitor/android": "^7.0.0",
+    "@capacitor/cli": "^7.0.0",
+    "@capacitor/ios": "^7.0.0",
+    "eslint": "^9.39.4",
+    "globals": "^17.4.0",
+    "vitest": "~4.1.4"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }

@@ -68,8 +68,12 @@ public class SpeechPlugin extends Plugin {
         Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
         intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
         intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, "en-US");
-        intent.putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, false);
+        intent.putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true);
         intent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1);
+        // Give children more time to think and finish speaking
+        intent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 3000L);
+        intent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 5000L);
+        intent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS, 5000L);
         return intent;
     }
 
@@ -136,6 +140,29 @@ public class SpeechPlugin extends Plugin {
     public void stopSpeaking(PluginCall call) {
         if (tts != null) tts.stop();
         call.resolve();
+    }
+
+    @PluginMethod
+    public void requestMic(PluginCall call) {
+        Log.w(TAG, "requestMic called");
+        if (getPermissionState("microphone") == PermissionState.GRANTED) {
+            Log.w(TAG, "Mic already granted");
+            JSObject ret = new JSObject();
+            ret.put("granted", true);
+            call.resolve(ret);
+            return;
+        }
+        requestPermissionForAlias("microphone", call, "handleMicOnlyPermission");
+    }
+
+    @PermissionCallback
+    private void handleMicOnlyPermission(PluginCall call) {
+        boolean granted = getPermissionState("microphone") == PermissionState.GRANTED;
+        Log.w(TAG, "Mic permission result: " + (granted ? "GRANTED" : "DENIED"));
+        JSObject ret = new JSObject();
+        ret.put("granted", granted);
+        if (granted) call.resolve(ret);
+        else call.reject("Microphone permission denied");
     }
 
     @PluginMethod

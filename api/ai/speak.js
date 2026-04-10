@@ -1,4 +1,4 @@
-const MODEL = 'gemini-2.5-flash-preview-tts';
+const MODEL = 'gemini-2.5-flash-native-audio-preview-12-2025';
 const BASE = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;
 
 module.exports = async (req, res) => {
@@ -21,6 +21,7 @@ module.exports = async (req, res) => {
       body: JSON.stringify({
         contents: [{ role: 'user', parts: [{ text }] }],
         generationConfig: {
+          maxOutputTokens: 150,
           response_modalities: ['AUDIO'],
           speech_config: {
             voice_config: {
@@ -44,7 +45,7 @@ module.exports = async (req, res) => {
       audio: audioPart.inlineData.data,
       mimeType: audioPart.inlineData.mimeType
     });
-  } catch (e) {
+  } catch (_e) {
     res.status(502).json({ error: 'TTS generation failed' });
   }
 };

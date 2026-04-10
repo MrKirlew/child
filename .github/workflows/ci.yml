@@ -19,6 +19,7 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
+      - run: npm run lint
       - run: npx vitest run
       - name: Check for leaked secrets
         run: |
@@ -65,3 +66,5 @@ jobs:
       - run: npm i -g vercel
       - run: vercel pull --yes --token=${{ secrets.VERCEL_TOKEN }}
       - run: vercel deploy --prod --token=${{ secrets.VERCEL_TOKEN }}
+      - name: Post-deploy health check
+        run: curl -f https://forthechild.vercel.app/api/health || exit 1

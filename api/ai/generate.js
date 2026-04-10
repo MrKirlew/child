@@ -1,5 +1,7 @@
-// Model fallback chain — if primary is overloaded, try next
-const MODELS = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-2.5-flash-lite'];
+// Text generation models — native audio models don't support text output
+// Native audio (gemini-2.5-flash-native-audio-preview-12-2025, gemini-3.1-flash-live-preview) used via Live API WebSocket only
+const PRIMARY = 'gemini-2.5-flash';
+const FALLBACK = 'gemini-2.0-flash';
 const API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
 
 // Child-safe content filtering — block at lowest threshold
@@ -33,24 +35,32 @@ module.exports = async (req, res) => {
 
   const body = { ...req.body, safetySettings: SAFETY };
 
-  // Try each model in fallback chain with retry
-  for (const model of MODELS) {
-    for (let attempt = 0; attempt < 2; attempt++) {
-      try {
-        const result = await tryGenerate(model, body, API_KEY);
-        if (result.ok) return res.json(result.data);
-        // 503/429 = overloaded/rate-limited — try next model or retry
-        if (result.status === 503 || result.status === 429) {
-          if (attempt === 0) await new Promise(r => setTimeout(r, 500));
-          continue;
-        }
-        // Other errors (400, 404, etc.) — return immediately
-        return res.status(result.status).json(result.data);
-      } catch (e) {
-        if (attempt === 0) continue;
+  // Try primary model 3 times with exponential backoff (1s, 2s, 4s)
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const result = await tryGenerate(PRIMARY, body, API_KEY);
+      if (result.ok) {
+        result.data._meta = { model: PRIMARY, attempt };
+        return res.json(result.data);
       }
+      if (result.status === 503 || result.status === 429) {
+        await new Promise(r => setTimeout(r, 1000 * Math.pow(2, attempt)));
+        continue;
+      }
+      return res.status(result.status).json(result.data);
+    } catch (_e) {
+      if (attempt < 2) { await new Promise(r => setTimeout(r, 1000)); continue; }
     }
   }
+
+  // Primary exhausted — try fallback once
+  try {
+    const result = await tryGenerate(FALLBACK, body, API_KEY);
+    if (result.ok) {
+      result.data._meta = { model: FALLBACK, attempt: 0, fallback: true };
+      return res.json(result.data);
+    }
+  } catch (_e) { /* fallback also failed */ }
 
   res.status(503).json({ error: 'All models unavailable. Please try again in a moment.' });
 };

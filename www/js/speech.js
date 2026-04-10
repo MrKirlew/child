@@ -1,0 +1,494 @@
+/* ══ GEMINI LIVE API — WebSocket voice conversation ══ */
+/* globals: S, VIZ, reportError, esc, addBub, addTyp, rmTyp, saveS, checkBadges, SUBS, sysPmt, handleVoiceAns, stopEMic, rememberConversationTurn, recordLearnActivity */
+
+const LIVE_MODELS = ['models/gemini-2.5-flash-native-audio-preview-12-2025', 'models/gemini-3.1-flash-live-preview'];
+let _liveModelIdx = 0;
+
+let _ws = null, _micStream = null, _micProcessor = null, _audioCtx = null;
+let _conversing = false, _lmic = false, _playQueue = [], _playing = false, _audioSrc = null;
+let _listenTimer = null;
+let _transcript = ''; // accumulates model's spoken text for chat bubble
+let _inputTranscript = ''; // accumulates child's speech for chat bubble
+let _lastUserTurn = '';
+
+function getAudioCtx() {
+  if (!_audioCtx) _audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 24000 });
+  return _audioCtx;
+}
+
+/* ══ GET WEBSOCKET URL (API key stays server-side) ══ */
+async function _getLiveUrl() {
+  console.warn('[KiddoAI] _getLiveUrl: fetching from ' + window.AI_PROXY + '/ai/live-token');
+  const r = await fetch(window.AI_PROXY + '/ai/live-token', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}'
+  });
+  const d = await r.json();
+  console.warn('[KiddoAI] _getLiveUrl: status=' + r.status + ' hasUrl=' + !!d.url);
+  if (!r.ok || !d.url) throw new Error(d.error || 'No WebSocket URL');
+  return d.url;
+}
+
+/* ══ WEBSOCKET CONNECTION ══ */
+async function _connectLive() {
+  if (_ws && _ws.readyState === WebSocket.OPEN) return;
+  const url = await _getLiveUrl();
+
+  await new Promise((resolve, reject) => {
+    const ws = new WebSocket(url);
+    const timeout = setTimeout(() => { ws.close(); reject(new Error('Setup timeout')); }, 15000);
+
+    ws.onopen = () => {
+      console.warn('[KiddoAI] WebSocket OPEN, sending setup...');
+      ws.send(JSON.stringify({
+        setup: {
+          model: LIVE_MODELS[_liveModelIdx],
+          generationConfig: {
+            responseModalities: ['AUDIO'],
+            speechConfig: {
+              voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } }
+            }
+          },
+          systemInstruction: { parts: [{ text: sysPmt() }] },
+          inputAudioTranscription: {},
+          outputAudioTranscription: {},
+          realtimeInputConfig: {
+            automaticActivityDetection: {
+              disabled: false,
+              startOfSpeechSensitivity: 'START_SENSITIVITY_HIGH',
+              endOfSpeechSensitivity: 'END_SENSITIVITY_HIGH',
+              silenceDurationMs: 1500,
+              prefixPaddingMs: 300
+            },
+            activityHandling: 'START_OF_ACTIVITY_INTERRUPTS'
+          }
+        }
+      }));
+    };
+
+    ws.onmessage = async (ev) => {
+      // Handle both string and Blob data (WebView may send Blob)
+      let text = ev.data;
+      if (typeof text !== 'string') {
+        try { text = await ev.data.text(); } catch (_e) { return; }
+      }
+      try {
+        const msg = JSON.parse(text);
+        if (msg.setupComplete) {
+          console.warn('[KiddoAI] setupComplete received!');
+          clearTimeout(timeout);
+          _ws = ws;
+          ws.onmessage = _handleServerMsg;
+          ws.onerror = () => { reportError('live-ws', 'WebSocket error', 'session'); };
+          ws.onclose = () => {
+            _ws = null;
+            if (_conversing) {
+              setTimeout(() => { if (_conversing) _connectLive().then(_startMicStream).catch(() => {}); }, 1000);
+            }
+          };
+          resolve();
+          return;
+        }
+      } catch (_e) { /* not JSON */ }
+    };
+
+    ws.onerror = () => { clearTimeout(timeout); reject(new Error('WebSocket error')); };
+    ws.onclose = (ev2) => { if (!_ws) { clearTimeout(timeout); reject(new Error('WebSocket closed: ' + ev2.code)); } };
+  });
+}
+
+/* ══ SERVER MESSAGE HANDLER ══ */
+async function _handleServerMsg(ev) {
+  let text = ev.data;
+  if (typeof text !== 'string') { try { text = await ev.data.text(); } catch (_e) { return; } }
+  let msg;
+  try { msg = JSON.parse(text); } catch (_e) { return; }
+
+  // Interruption — child started speaking while Ollie was talking
+  if (msg.serverContent && msg.serverContent.interrupted) {
+    _stopPlayback();
+    VIZ.stop();
+    return;
+  }
+
+  // Child's speech transcription — show in chat
+  if (msg.serverContent && msg.serverContent.inputTranscription && msg.serverContent.inputTranscription.text) {
+    _inputTranscript += msg.serverContent.inputTranscription.text;
+  }
+
+  // Audio response from model — flush child's speech bubble first
+  if (msg.serverContent && msg.serverContent.modelTurn && msg.serverContent.modelTurn.parts) {
+    if (_inputTranscript.trim()) {
+      const userText = _inputTranscript.trim();
+      addBub('user', userText, {});
+      rememberConversationTurn('user', userText);
+      _lastUserTurn = userText;
+      _inputTranscript = '';
+    }
+    for (const part of msg.serverContent.modelTurn.parts) {
+      if (part.inlineData && part.inlineData.data) {
+        _queueAudio(part.inlineData.data);
+      }
+    }
+  }
+
+  // Text transcription of model's speech
+  if (msg.serverContent && msg.serverContent.outputTranscription && msg.serverContent.outputTranscription.text) {
+    _transcript += msg.serverContent.outputTranscription.text;
+  }
+
+  // Turn complete — model finished speaking
+  if (msg.serverContent && msg.serverContent.turnComplete) {
+    if (_transcript.trim()) {
+      // Parse JSON if the model returned it (from system prompt), otherwise use raw text
+      let displayText = _transcript.trim();
+      try { const parsed = JSON.parse(displayText); if (parsed.message) displayText = parsed.message; } catch (_e) { /* not JSON, use as-is */ }
+      rememberConversationTurn('assistant', displayText);
+      addBub('ai', displayText, { lessonType: 'Teaching' });
+      recordLearnActivity(_detectSubject(displayText), _lastUserTurn);
+      _lastUserTurn = '';
+    }
+    _transcript = '';
+  }
+
+  // Session ending warning
+  if (msg.goAway) {
+    // Reconnect before session expires
+    setTimeout(() => { if (_conversing) { _disconnectLive(); _connectLive().then(_startMicStream).catch(() => {}); } }, 2000);
+  }
+}
+
+function _detectSubject(text) {
+  const t = text.toLowerCase();
+  if (/spell|phonics|letter|sound|word/.test(t)) return 'Spelling';
+  if (/grammar|sentence|punctuat|noun|verb/.test(t)) return 'Grammar';
+  if (/read|passage|story|compre/.test(t)) return 'Comprehension';
+  if (/science|experiment|plant|animal|weather/.test(t)) return 'Science';
+  if (/tech|computer|code|internet/.test(t)) return 'Technology';
+  if (/engineer|build|design|structure/.test(t)) return 'Engineering';
+  if (/math|number|count|add|subtract|multiply|divide|plus|minus/.test(t)) return 'Math';
+  return 'Comprehension';
+}
+
+/* ══ AUDIO PLAYBACK — queue PCM chunks for gapless play ══ */
+function _queueAudio(base64) {
+  _playQueue.push(base64);
+  if (!_playing) _playNext();
+}
+
+async function _playNext() {
+  if (_playQueue.length === 0) { _playing = false; VIZ.stop(); return; }
+  _playing = true;
+  VIZ.start();
+  const base64 = _playQueue.shift();
+  const ctx = getAudioCtx();
+  if (ctx.state === 'suspended') await ctx.resume();
+  const raw = atob(base64);
+  const buf = new Int16Array(raw.length / 2);
+  for (let i = 0; i < buf.length; i++) buf[i] = raw.charCodeAt(i * 2) | (raw.charCodeAt(i * 2 + 1) << 8);
+  const float = new Float32Array(buf.length);
+  for (let i = 0; i < buf.length; i++) float[i] = buf[i] / 32768;
+  const ab = ctx.createBuffer(1, float.length, 24000);
+  ab.getChannelData(0).set(float);
+  _audioSrc = ctx.createBufferSource();
+  _audioSrc.buffer = ab;
+  _audioSrc.connect(ctx.destination);
+  _audioSrc.onended = () => _playNext();
+  _audioSrc.start();
+}
+
+function _stopPlayback() {
+  _playQueue = [];
+  _playing = false;
+  if (_audioSrc) { try { _audioSrc.stop(); } catch (_e) { /* already stopped */ } _audioSrc = null; }
+}
+
+/* ══ MIC CAPTURE — raw PCM 16kHz → WebSocket ══ */
+async function _requestMicPermission() {
+  // On Android Capacitor, request RECORD_AUDIO via our custom requestMic method
+  if (window.IS_ANDROID && window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.SpeechPlugin) {
+    console.warn('[KiddoAI] Requesting mic permission via SpeechPlugin.requestMic...');
+    const result = await window.Capacitor.Plugins.SpeechPlugin.requestMic({});
+    if (!result || !result.granted) throw new Error('Microphone permission denied');
+    console.warn('[KiddoAI] Mic permission granted!');
+  }
+}
+
+async function _startMicStream() {
+  if (_micStream) return;
+  await _requestMicPermission();
+  const stream = await navigator.mediaDevices.getUserMedia({ audio: { sampleRate: 16000, channelCount: 1, echoCancellation: true, noiseSuppression: true } });
+  _micStream = stream;
+  const ctx = new AudioContext({ sampleRate: 16000 });
+  const source = ctx.createMediaStreamSource(stream);
+  // ScriptProcessorNode for broad compatibility (AudioWorklet needs HTTPS + module)
+  _micProcessor = ctx.createScriptProcessor(4096, 1, 1);
+  _micProcessor.onaudioprocess = (e) => {
+    if (!_ws || _ws.readyState !== WebSocket.OPEN) return;
+    const float32 = e.inputBuffer.getChannelData(0);
+    const int16 = new Int16Array(float32.length);
+    for (let i = 0; i < float32.length; i++) int16[i] = Math.max(-32768, Math.min(32767, Math.round(float32[i] * 32768)));
+    const bytes = new Uint8Array(int16.buffer);
+    let binary = '';
+    for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+    const b64 = btoa(binary);
+    _ws.send(JSON.stringify({
+      realtimeInput: { mediaChunks: [{ mimeType: 'audio/pcm;rate=16000', data: b64 }] }
+    }));
+  };
+  source.connect(_micProcessor);
+  _micProcessor.connect(ctx.destination); // required for ScriptProcessorNode to fire
+}
+
+function _stopMicStream() {
+  if (_micProcessor) { _micProcessor.disconnect(); _micProcessor = null; }
+  if (_micStream) { _micStream.getTracks().forEach(t => t.stop()); _micStream = null; }
+}
+
+/* ══ DISCONNECT ══ */
+function _flushPendingTranscripts() {
+  // Flush any child speech that hasn't been shown
+  if (_inputTranscript.trim()) {
+    const userText = _inputTranscript.trim();
+    addBub('user', userText, {});
+    rememberConversationTurn('user', userText);
+    _lastUserTurn = userText;
+    _inputTranscript = '';
+  }
+  // Flush any Ollie speech that hasn't been shown
+  if (_transcript.trim()) {
+    let displayText = _transcript.trim();
+    try { const parsed = JSON.parse(displayText); if (parsed.message) displayText = parsed.message; } catch (_e) { /* not JSON */ }
+    rememberConversationTurn('assistant', displayText);
+    addBub('ai', displayText, { lessonType: 'Teaching' });
+    recordLearnActivity(_detectSubject(displayText), _lastUserTurn);
+    _lastUserTurn = '';
+    _transcript = '';
+  }
+}
+
+function _disconnectLive() {
+  _flushPendingTranscripts();
+  _stopMicStream();
+  _stopPlayback();
+  VIZ.stop();
+  if (_ws) { try { _ws.close(); } catch (_e) { /* already closed */ } _ws = null; }
+}
+
+/* ══ PUBLIC API — used by ui.js and ai.js ══ */
+
+// Connect WebSocket only (no mic) — used on app startup for Ollie's greeting
+async function connectLive() {
+  console.warn('[KiddoAI] connectLive: starting...');
+  for (let mi = 0; mi < LIVE_MODELS.length; mi++) {
+    _liveModelIdx = mi;
+    try {
+      console.warn('[KiddoAI] connectLive: trying model ' + LIVE_MODELS[mi]);
+      await _connectLive();
+      console.warn('[KiddoAI] connectLive: SUCCESS with ' + LIVE_MODELS[mi]);
+      return; // connected
+    } catch (e) {
+      console.error('[KiddoAI] connectLive: FAILED ' + LIVE_MODELS[mi] + ': ' + e.message);
+      reportError('live', e.message, 'connectOnly model=' + LIVE_MODELS[mi]);
+      _disconnectLive();
+    }
+  }
+  throw new Error('All Live API models failed to connect');
+}
+
+// Start/stop conversation (Learn tab mic button)
+async function togLMic() {
+  if (_conversing) { stopConversation(); return; }
+  startConversation();
+}
+
+async function startConversation() {
+  _conversing = true;
+  micUI('lmic', true);
+  try {
+    // Connect WebSocket if not already open
+    if (!_ws || _ws.readyState !== WebSocket.OPEN) {
+      document.getElementById('slbl').textContent = 'Connecting...';
+      await connectLive();
+    }
+    // Now start mic (this triggers permission prompt if needed)
+    document.getElementById('slbl').textContent = 'Starting mic...';
+    await _startMicStream();
+    document.getElementById('slbl').textContent = 'Listening... tap 🎤 to stop';
+    clearTimeout(_listenTimer);
+    _listenTimer = setTimeout(() => {
+      if (_conversing) { stopConversation(); document.getElementById('slbl').textContent = 'Tap 🎤 if you need anything!'; }
+    }, (S.listenWait || 30) * 1000);
+  } catch (e) {
+    reportError('live', e.message, 'startConversation');
+    const isPermission = e.message && (e.message.includes('Permission') || e.message.includes('NotAllowed') || e.message.includes('permission'));
+    document.getElementById('slbl').textContent = isPermission ? 'Mic permission needed — tap 🎤 to retry' : 'Connection failed — tap 🎤 to retry';
+    _conversing = false; micUI('lmic', false);
+  }
+}
+
+function stopConversation() {
+  _conversing = false;
+  clearTimeout(_listenTimer); _listenTimer = null;
+  _stopMicStream();
+  // Do NOT stop playback — let Ollie finish speaking her current response
+  // Do NOT close WebSocket — let turnComplete arrive so transcript gets flushed
+  // Close WebSocket after 30s idle (enough time for Ollie to finish)
+  setTimeout(() => { if (!_conversing && _ws) _disconnectLive(); }, 30000);
+  micUI('lmic', false);
+  document.getElementById('slbl').textContent = 'Tap 🎤 to talk to Ollie';
+}
+
+// Send text message through Live API (for startup greeting and text input)
+function sendLiveText(text, opts) {
+  if (!_ws || _ws.readyState !== WebSocket.OPEN) return false;
+  const settings = opts || {};
+  const visibleText = String(settings.userVisibleText ?? text ?? '').trim();
+  if (settings.addUserBubble !== false && visibleText) addBub('user', visibleText, {});
+  if (settings.trackHistory !== false && visibleText) {
+    rememberConversationTurn('user', visibleText);
+    _lastUserTurn = visibleText;
+  }
+  _ws.send(JSON.stringify({
+    clientContent: { turns: [{ role: 'user', parts: [{ text }] }], turnComplete: true }
+  }));
+  return true;
+}
+
+// Speak text through Live API (for welcome message, badges, errors)
+async function speak(txt) {
+  // If Live API is connected, send as text and let model speak it
+  if (_ws && _ws.readyState === WebSocket.OPEN) {
+    _ws.send(JSON.stringify({
+      clientContent: { turns: [{ role: 'user', parts: [{ text: 'Please say this exactly to the child: ' + txt }] }], turnComplete: true }
+    }));
+    return;
+  }
+  // Gemini REST TTS only — no robotic fallback
+  const clean = txt.replace(/[*_~`#]/g, '').substring(0, 800);
+  VIZ.start();
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const r = await fetch(window.AI_PROXY + '/ai/speak', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: clean, voice: 'Kore' })
+      });
+      if (r.ok) {
+        const d = await r.json();
+        if (d.audio) { await _playPCMSingle(d.audio); return; }
+      }
+    } catch (_e) { /* retry */ }
+    if (attempt === 0) await new Promise(r => setTimeout(r, 500));
+  }
+  // TTS failed — show text only, no robotic voice
+  VIZ.stop();
+}
+
+async function _playPCMSingle(base64) {
+  const ctx = getAudioCtx(); if (ctx.state === 'suspended') await ctx.resume();
+  const raw = atob(base64); const buf = new Int16Array(raw.length / 2);
+  for (let i = 0; i < buf.length; i++) buf[i] = raw.charCodeAt(i * 2) | (raw.charCodeAt(i * 2 + 1) << 8);
+  const float = new Float32Array(buf.length);
+  for (let i = 0; i < buf.length; i++) float[i] = buf[i] / 32768;
+  const ab = ctx.createBuffer(1, float.length, 24000);
+  ab.getChannelData(0).set(float);
+  const src = ctx.createBufferSource(); src.buffer = ab; src.connect(ctx.destination);
+  src.onended = () => VIZ.stop();
+  src.start();
+}
+
+// Play PCM chunk — returns Promise, does NOT touch VIZ (caller manages visualizer)
+function _playPCMChunk(base64) {
+  return new Promise(async (resolve) => {
+    const ctx = getAudioCtx(); if (ctx.state === 'suspended') await ctx.resume();
+    const raw = atob(base64); const buf = new Int16Array(raw.length / 2);
+    for (let i = 0; i < buf.length; i++) buf[i] = raw.charCodeAt(i * 2) | (raw.charCodeAt(i * 2 + 1) << 8);
+    const float = new Float32Array(buf.length);
+    for (let i = 0; i < buf.length; i++) float[i] = buf[i] / 32768;
+    const ab = ctx.createBuffer(1, float.length, 24000);
+    ab.getChannelData(0).set(float);
+    const src = ctx.createBufferSource(); src.buffer = ab; src.connect(ctx.destination);
+    src.onended = resolve;
+    src.start();
+  });
+}
+
+// REST-only TTS — bypasses Live API WebSocket. Use for Exercise, Spell, and Badge TTS.
+// Chunks at sentence boundaries (max 2 sentences per TTS call) per CLAUDE.md TTS Chunking rule.
+async function speakDirect(txt) {
+  const clean = txt.replace(/[*_~`#]/g, '').substring(0, 800);
+  const sentences = clean.match(/[^.!?]+[.!?]+/g) || [clean];
+  const chunks = [];
+  for (let i = 0; i < sentences.length; i += 2) {
+    chunks.push(sentences.slice(i, i + 2).join(' ').trim());
+  }
+  VIZ.start();
+  for (const chunk of chunks) {
+    if (!chunk) continue;
+    let played = false;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const r = await fetch(window.AI_PROXY + '/ai/speak', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: chunk, voice: 'Kore' })
+        });
+        if (r.ok) {
+          const d = await r.json();
+          if (d.audio) { await _playPCMChunk(d.audio); played = true; break; }
+        }
+      } catch (_e) { /* retry */ }
+      if (attempt === 0) await new Promise(r => setTimeout(r, 500));
+    }
+    if (!played) break;
+  }
+  VIZ.stop();
+}
+
+function stopAll() {
+  _stopPlayback();
+  VIZ.stop();
+}
+
+function micUI(id, on) {
+  const b = document.getElementById(id); if (!b) return;
+  if (id === 'lmic' && _conversing) { b.textContent = '\u23F9'; b.className = 'on'; return; }
+  b.textContent = on ? '\u23F9' : '\uD83C\uDFA4'; b.className = on ? 'on' : '';
+}
+
+// Called by Android native TTS when done (for exercise tab fallback)
+function onAndroidTTSDone() { VIZ.stop(); }
+
+/* ══ STT — EXERCISE TAB (still uses SpeechRecognizer) ══ */
+const NB = {
+  get ok() { return window.IS_ANDROID && window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.SpeechPlugin; },
+  call(method, args) { if (this.ok) try { window.Capacitor.Plugins.SpeechPlugin[method](args || {}).catch(() => {}); } catch (_e) { /* bridge unavailable */ } },
+};
+
+let _esr = null, _emic = false, _speechTarget = 'exercise';
+function togExMic() {
+  if (_emic) { stopEMic(); return; }
+  _speechTarget = 'exercise';
+  if (NB.ok) { _emic = true; micUI('exmic', true); document.getElementById('vatr').textContent = '🎤 Listening...'; NB.call('startListening'); return; }
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) { document.getElementById('vatr').textContent = 'Speech not available'; return; }
+  _esr = new SR(); _esr.lang = 'en-US'; _esr.interimResults = true;
+  _emic = true; micUI('exmic', true);
+  document.getElementById('vatr').textContent = '🎤 Listening...';
+  _esr.onresult = e => {
+    const t = Array.from(e.results).map(r => r[0].transcript).join('');
+    document.getElementById('vatr').textContent = t;
+    if (e.results[e.results.length - 1].isFinal) { stopEMic(); handleVoiceAns(t); }
+  };
+  _esr.onend = () => stopEMic(); _esr.onerror = () => { stopEMic(); document.getElementById('vatr').textContent = ''; };
+  _esr.start();
+}
+function stopEMic() { if (_esr) _esr.stop(); _esr = null; _emic = false; micUI('exmic', false); }
+
+// Android speech callbacks (exercise tab only now)
+function onAndroidSpeechResult(t) {
+  if (_speechTarget === 'exercise') { stopEMic(); document.getElementById('vatr').textContent = t; handleVoiceAns(t); }
+}
+function onAndroidSpeechError(reason) {
+  const msg = reason || "Couldn't hear you";
+  reportError('speech', msg, _speechTarget);
+  if (_speechTarget === 'exercise') { stopEMic(); document.getElementById('vatr').textContent = msg; }
+}

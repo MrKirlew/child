@@ -9,7 +9,83 @@
 
 | File | Entries | Date Range |
 |------|---------|------------|
-| PROJECT_SUMMARY.md | 15 | 2025-04-07 – present |
+| PROJECT_SUMMARY.md | 19 | 2025-04-07 – present |
+
+---
+
+## 2026-04-09-S4 — Session Open
+**Session:** 2026-04-09-S4
+**Member:** Dev Lead (full team)
+**Knowledge status:** All current (9/9 members confirmed 2026-04-09)
+**Open blocks from last session:** None
+**CI status:** ✅ green (nightly 2026-04-10 00:45 UTC)
+
+---
+
+## 2026-04-09-S4 — HQ Briefing
+**Session:** 2026-04-09-S4
+**Member:** Growth & Marketing Strategist (full team)
+**Market Pulse:** AI tutors fastest-growing EdTech segment; voice-first interfaces and privacy-as-differentiator trending.
+**Competitor Scan:** Pre-launch — no rank data. Key gap identified: no major player combines voice-first AI tutoring + K-6 multi-subject + zero data collection.
+**ASO Status:** Pre-launch. Target keywords set. Review prompt coded (3 correct answers, parent-facing).
+**Retention:** No data yet — retention hooks coded (localStorage progress, streaks, badges, conversation mode).
+**Top 3 Growth Levers:** (1) Get on the Play Store, (2) Optimize store listing for ASO, (3) Submit to Common Sense Media.
+**Child Safety Check:** All tactics passed §0 filter. Zero removed.
+**Actions assigned:** 8 actions across L1–L2: Play Store submission (Platform Eng + Play Store Specialist), screenshots + listing copy + feature graphic (UX Guardian + Growth Strategist), data safety form + privacy URL (Security Auditor), CSM submission + landing page SEO (Growth Strategist + Dev Lead).
+**Pending:** All 8 actions pending — blocked on Play Store submission as the gating item.
+
+---
+
+## 2026-04-09-S3 — Session Wrap-Up (Team Child Out)
+**Session:** 2026-04-09-S3
+**Member:** Dev Lead (full team)
+**Done:** Massive session — file split (898→322 lines), SHA-256 PIN hashing, health.js real ping, ESLint 9 pass, privacy.html COPPA review, full standards audit (41/41), exercise/learn/progress integration (5 fixes), conversation beeping fix + configurable listen wait, safe area insets, **Gemini Live API integration** (gemini-2.5-flash-native-audio-preview-12-2025 via WebSocket with VAD + interruptibility + input/output transcription), system prompt v7 (accuracy guardrails, voice-only), mic permission fix (MODIFY_AUDIO_SETTINGS + WebChromeClient), Gradle/AGP/SDK upgrades. All deployed to Pixel 7 Pro + Vercel.
+**Gate:** 25/25 CLEARED
+**Pending:** Play Store signing, exercise tab Live API migration, 15-min session reconnect testing
+**Blocks:** None
+**Next:** Play Store signing and submission prep
+
+---
+
+## 2026-04-09-S3 — Full Standards Compliance Audit + 10 Fixes
+**Session:** 2026-04-09-S3
+**Member:** Dev Lead + Security Auditor + QA Lead + AI Engineer (full team audit)
+**Task:** Ran full CLAUDE.md standards compliance audit (31 PASS / 10 FAIL). Fixed all 10: token budgets (chat 300, exercise 400, check 100, TTS 150), exponential backoff 1s→2s, model metadata in API response, prompt caching (SHA-256 + sessionStorage 10-min TTL), token usage tracking (50k daily warning), targetSdkVersion 33→34, removed usesCleartextTraffic, fixed lint glob, added CI lint + health check curl steps.
+**Gate:** 25/25 CLEARED
+**Changed files:** www/js/ai.js, www/js/exercises.js, www/js/ui.js, api/ai/generate.js, api/ai/speak.js, server/index.js, android/variables.gradle, android/app/src/main/AndroidManifest.xml, eslint.config.js, package.json, .github/workflows/ci.yml, CHANGELOG.md
+**Blocks:** None
+**Pending:** None
+
+---
+
+## 2026-04-09-S3 — Infrastructure Hardening (5 tasks)
+**Session:** 2026-04-09-S3
+**Member:** Dev Lead + Security Auditor + QA Lead + AI Engineer (full team)
+**Task:** (1) Split www/index.html 898→322 lines into css/main.css + js/{ai,speech,exercises,progress,ui}.js. (2) SHA-256 PIN hashing with auto-migration — plain-text PIN never stored. (3) health.js real Gemini ping with 8s timeout. (4) ESLint 9 baseline pass — eslint.config.js created, 0 errors. (5) privacy.html Security Auditor review — explicit COPPA section, expanded parental rights, Candy Pop theme.
+**Gate:** 25/25 CLEARED
+**Changed files:** www/index.html (rewritten), www/css/main.css (new), www/js/{ai,speech,exercises,progress,ui}.js (new), api/health.js, api/ai/generate.js, api/ai/speak.js, eslint.config.js (new), www/privacy.html, CHANGELOG.md, package.json
+**Blocks:** None
+**Pending:** None
+
+---
+
+## 2026-04-09-S3 — Fix Learn/Exercises/Progress Integration
+**Session:** 2026-04-09-S3
+**Member:** Dev Lead + QA Lead (full team audit)
+**Task:** Fixed 5 integration bugs between Learn, Exercises, and Progress tabs: (1) Exercise completions now count toward subject badges via S.cnt update in finishEx(); (2) Voice answer exercises show text input fallback; (3) Exercise JSON validation prevents broken UI from malformed AI responses; (4) Comprehension passages render in exercise card + EXPM prompt updated; (5) Reset session clears bestStreak.
+**Gate:** 25/25 CLEARED
+**Changed files:** www/index.html (finishEx, renderEx, resetSess, EXPM), CHANGELOG.md
+**Blocks:** None
+**Pending:** None
+
+---
+
+## 2026-04-09-S3 — Session Open
+**Session:** 2026-04-09-S3
+**Member:** Dev Lead (full team)
+**Knowledge status:** All current (9/9 members confirmed 2026-04-09)
+**Open blocks from last session:** None
+**CI status:** ✅ green (13243f6)
 
 ---
 

@@ -26,6 +26,37 @@ Gate:    [X/25 CLEARED | BLOCKED]
 
 ## Log
 
+## 2026-04-09 19:30 UTC — Session Wrap-Up
+Session: 2026-04-09-S3
+Done:
+- File split: www/index.html 898→322 lines into css/main.css + js/{ai,speech,exercises,progress,ui}.js
+- SHA-256 PIN hashing with auto-migration of plain-text PINs
+- health.js real Gemini ping with 8s timeout
+- ESLint 9 baseline pass — eslint.config.js created, 0 errors across all JS files
+- privacy.html Security Auditor review — COPPA section, expanded parental rights, Candy Pop theme
+- Full CLAUDE.md standards compliance audit — 41/41 items passing (token budgets, backoff, prompt caching, token tracking)
+- Exercise/Learn/Progress integration fixes (badges, voice fallback, JSON validation, passage display, reset)
+- Conversation mode beeping loop replaced with 30s listen window + parent-configurable wait time
+- Safe area insets for Android gesture bar / iPhone home indicator / notches
+- Gemini Live API integration: replaced 3-hop STT→AI→TTS with single WebSocket to gemini-2.5-flash-native-audio-preview-12-2025
+- Automatic VAD, interruptibility, interruption handling via Live API
+- System prompt v7: factual accuracy guardrails, voice-only awareness, no JSON for voice mode
+- Child's speech now shows in chat (inputAudioTranscription), Ollie finishes full responses
+- Fixed mic permission (MODIFY_AUDIO_SETTINGS + WebChromeClient onPermissionRequest grant)
+- Gradle 8.11.1 / AGP 8.7.3 / compileSdk+targetSdk 35 for Capacitor 7 + Java 21
+- All deployed to Pixel 7 Pro, Vercel production, verified on device
+
+Pending:
+- Play Store production signing + submission
+- Exercise tab mic still uses SpeechRecognizer (could migrate to Live API later)
+- Ollie sometimes says "have you seen X in a picture" — may need further prompt tuning
+- Session reconnect after 15-min Live API limit not yet tested
+
+Next: Play Store signing and submission prep.
+Gate: 25/25 CLEARED
+
+---
+
 ## 2026-04-09 16:30 UTC — Session Wrap-Up
 Done:
 - Reliability Gate: updated GATES.md (9 obsolete checks modernized), ran full 25-point audit, fixed 3 failures (touch targets, silent catches). 25/25 CLEARED.
