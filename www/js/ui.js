@@ -2,7 +2,7 @@
 /* globals: S, SUBS, SCOL, saveS, updProg, updScoreBar, addBub, speak, speakDirect, VIZ, hashPin, esc, sendLiveText, connectLive, sendL, aiGenerate, checkBadges */
 
 function showTab(t) { ['learn', 'ex', 'spell', 'prog'].forEach(id => { document.getElementById('tab-' + id).classList.toggle('on', id === t); document.getElementById('tb-' + id).classList.toggle('on', id === t); }); if (t === 'prog') updProg(); }
-function setMode(m) { S.mode = m; saveS(); document.body.className = m === 'exciting' ? '' : 'mode-' + m; document.querySelectorAll('[data-mode]').forEach(e => e.classList.toggle('on', e.dataset.mode === m)); }
+function setMode(m) { S.mode = m; saveS(); document.body.className = (m === 'normal' || m === 'excited') ? '' : 'mode-' + m; document.querySelectorAll('[data-mode]').forEach(e => e.classList.toggle('on', e.dataset.mode === m)); }
 function setDiff(d) { S.diff = d; saveS(); document.querySelectorAll('[data-d]').forEach(e => e.classList.toggle('on', e.dataset.d === d)); }
 function setListenWait(s) { S.listenWait = s; saveS(); document.querySelectorAll('[data-lw]').forEach(e => e.classList.toggle('on', parseInt(e.dataset.lw, 10) === s)); }
 function pickGrade(g) { S.grade = g; S.chatHist = []; saveS(); document.getElementById('glbl').textContent = g; document.querySelectorAll('#gpr .pl').forEach(e => e.classList.toggle('on', e.dataset.g === g)); }
@@ -22,7 +22,7 @@ function openDash() {
   const dailyTokens = _getDailyTokens();
   const tokenWarn = dailyTokens > 50000 ? `<div style="background:rgba(245,158,11,.12);border:1.5px solid rgba(245,158,11,.3);border-radius:10px;padding:8px;margin-bottom:8px;font-size:11px;font-weight:700;color:#D97706;text-align:center">High usage today: ~${Math.round(dailyTokens / 1000)}k tokens</div>` : '';
   document.getElementById('d-stats').innerHTML = tokenWarn + `<div class="sc2"><div class="sn2">${tot}</div><div class="sl2">Exercises</div></div><div class="sc2"><div class="sn2">${S.earnedBadges.length}</div><div class="sl2">Badges</div></div><div class="sc2"><div class="sn2">${S.bestStreak}</div><div class="sl2">Best Streak</div></div><div class="sc2"><div class="sn2">Gr.${S.grade}</div><div class="sl2">Grade</div></div>`;
-  document.querySelectorAll('#mpr [data-mode]').forEach(e => e.classList.toggle('on', e.dataset.mode === (S.mode || 'exciting')));
+  document.querySelectorAll('#mpr [data-mode]').forEach(e => e.classList.toggle('on', e.dataset.mode === (S.mode || 'normal')));
   document.querySelectorAll('#dpr [data-d]').forEach(e => e.classList.toggle('on', e.dataset.d === S.diff));
   document.querySelectorAll('#lwr [data-lw]').forEach(e => e.classList.toggle('on', parseInt(e.dataset.lw, 10) === (S.listenWait || 30)));
   const mx = Math.max(...Object.values(S.ex).map(e => e.t), 1);
@@ -166,7 +166,7 @@ async function startApp() {
   document.getElementById('glbl').textContent = S.grade;
   document.querySelectorAll('[data-d]').forEach(e => e.classList.toggle('on', e.dataset.d === S.diff));
   VIZ.ini(); updScoreBar(); updProg(); _renderSpellHistory();
-  setMode(S.mode || 'exciting');
+  setMode(S.mode || 'normal');
   const welcomeMsg = 'Hi superstar! I\'m Ollie the Owl! Tap the microphone button to talk to me about anything, or go to Exercises for fun quizzes!';
   // Connect Live API and have Ollie speak — transcript creates the single chat bubble
   try {

@@ -190,11 +190,12 @@
   <button class="cx" onclick="closeAll()">✕</button>
   <div class="st2">📊 Parent Dashboard</div>
   <div class="sg" id="d-stats"></div>
-  <div class="fg"><div class="fl">Mode</div>
+  <div class="fg"><div class="fl">Voice Tone</div>
     <div class="pr" id="mpr">
+      <div class="pl on" data-mode="normal" onclick="setMode('normal')">😊 Normal</div>
+      <div class="pl" data-mode="excited" onclick="setMode('excited')">🎉 Excited</div>
       <div class="pl" data-mode="calm" onclick="setMode('calm')">🌿 Calm</div>
-      <div class="pl on" data-mode="exciting" onclick="setMode('exciting')">🎉 Exciting</div>
-      <div class="pl" data-mode="night" onclick="setMode('night')">🌙 Night Calm</div>
+      <div class="pl" data-mode="night" onclick="setMode('night')">🌙 Night</div>
     </div>
   </div>
   <div class="fg"><div class="fl">Difficulty Level</div>
@@ -277,7 +278,7 @@ const BADGES=[
 
 /* ══ STATE ══ */
 let S={
-  grade:'K',diff:'Beginner',pin:'',listenWait:30,mode:'exciting',
+  grade:'K',diff:'Beginner',pin:'',listenWait:30,mode:'normal',
   cnt:{Spelling:0,Grammar:0,Comprehension:0,Science:0,Technology:0,Engineering:0,Math:0},
   ex:{Spelling:{c:0,t:0},Grammar:{c:0,t:0},Comprehension:{c:0,t:0},Science:{c:0,t:0},Technology:{c:0,t:0},Engineering:{c:0,t:0},Math:{c:0,t:0}},
   streak:0,bestStreak:0,totalEx:0,
