@@ -18,6 +18,9 @@ Format: `- [type] description` — types: `feat`, `fix`, `refactor`, `chore`
 - [fix] Renamed "Exciting" to "Excited" and toned it down — enthusiastic but not screaming
 - [fix] System prompt v8: much stronger voice-only enforcement — explicit forbidden phrases list + replacement phrases, "you are blind" framing
 - [fix] Continuous conversation: listen timer now resets on every activity (child speaks, Ollie responds, audio plays) instead of firing once 30s after mic start
+- [fix] Audio static: stopped mic audio from playing through speakers (ScriptProcessorNode was connected to destination — now routes through silent gain node)
+- [fix] Audio clicks: added 2ms fade-in/fade-out at PCM chunk boundaries to eliminate pops between audio segments
+- [fix] Mic capture: added autoGainControl to getUserMedia for cleaner input levels
 - [refactor] Split www/index.html (898→322 lines) into www/css/main.css + www/js/{ai,speech,exercises,progress,ui}.js
 - [fix] SHA-256 PIN hashing — parent PIN stored as hash, never plain text. Auto-migrates existing PINs.
 - [fix] health.js makes real Gemini API ping with 8s timeout instead of static 200

@@ -185,11 +185,7 @@ async function _playNext() {
   const base64 = _playQueue.shift();
   const ctx = getAudioCtx();
   if (ctx.state === 'suspended') await ctx.resume();
-  const raw = atob(base64);
-  const buf = new Int16Array(raw.length / 2);
-  for (let i = 0; i < buf.length; i++) buf[i] = raw.charCodeAt(i * 2) | (raw.charCodeAt(i * 2 + 1) << 8);
-  const float = new Float32Array(buf.length);
-  for (let i = 0; i < buf.length; i++) float[i] = buf[i] / 32768;
+  const float = _decodePCM(base64);
   const ab = ctx.createBuffer(1, float.length, 24000);
   ab.getChannelData(0).set(float);
   _audioSrc = ctx.createBufferSource();
@@ -219,7 +215,7 @@ async function _requestMicPermission() {
 async function _startMicStream() {
   if (_micStream) return;
   await _requestMicPermission();
-  const stream = await navigator.mediaDevices.getUserMedia({ audio: { sampleRate: 16000, channelCount: 1, echoCancellation: true, noiseSuppression: true } });
+  const stream = await navigator.mediaDevices.getUserMedia({ audio: { sampleRate: 16000, channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
   _micStream = stream;
   const ctx = new AudioContext({ sampleRate: 16000 });
   const source = ctx.createMediaStreamSource(stream);
@@ -239,7 +235,11 @@ async function _startMicStream() {
     }));
   };
   source.connect(_micProcessor);
-  _micProcessor.connect(ctx.destination); // required for ScriptProcessorNode to fire
+  // Connect to a silent gain node — ScriptProcessorNode needs a destination to fire, but we must NOT play mic audio through speakers (causes static/feedback)
+  const silentGain = ctx.createGain();
+  silentGain.gain.value = 0;
+  silentGain.connect(ctx.destination);
+  _micProcessor.connect(silentGain);
 }
 
 function _stopMicStream() {
@@ -392,12 +392,22 @@ async function speak(txt) {
   VIZ.stop();
 }
 
-async function _playPCMSingle(base64) {
-  const ctx = getAudioCtx(); if (ctx.state === 'suspended') await ctx.resume();
-  const raw = atob(base64); const buf = new Int16Array(raw.length / 2);
+// Decode base64 PCM to Float32 with edge smoothing
+function _decodePCM(base64) {
+  const raw = atob(base64);
+  const buf = new Int16Array(raw.length / 2);
   for (let i = 0; i < buf.length; i++) buf[i] = raw.charCodeAt(i * 2) | (raw.charCodeAt(i * 2 + 1) << 8);
   const float = new Float32Array(buf.length);
   for (let i = 0; i < buf.length; i++) float[i] = buf[i] / 32768;
+  // 48-sample (~2ms) fade-in/fade-out to prevent clicks
+  const fade = Math.min(48, float.length >> 1);
+  for (let i = 0; i < fade; i++) { float[i] *= i / fade; float[float.length - 1 - i] *= i / fade; }
+  return float;
+}
+
+async function _playPCMSingle(base64) {
+  const ctx = getAudioCtx(); if (ctx.state === 'suspended') await ctx.resume();
+  const float = _decodePCM(base64);
   const ab = ctx.createBuffer(1, float.length, 24000);
   ab.getChannelData(0).set(float);
   const src = ctx.createBufferSource(); src.buffer = ab; src.connect(ctx.destination);
@@ -409,10 +419,7 @@ async function _playPCMSingle(base64) {
 function _playPCMChunk(base64) {
   return new Promise(async (resolve) => {
     const ctx = getAudioCtx(); if (ctx.state === 'suspended') await ctx.resume();
-    const raw = atob(base64); const buf = new Int16Array(raw.length / 2);
-    for (let i = 0; i < buf.length; i++) buf[i] = raw.charCodeAt(i * 2) | (raw.charCodeAt(i * 2 + 1) << 8);
-    const float = new Float32Array(buf.length);
-    for (let i = 0; i < buf.length; i++) float[i] = buf[i] / 32768;
+    const float = _decodePCM(base64);
     const ab = ctx.createBuffer(1, float.length, 24000);
     ab.getChannelData(0).set(float);
     const src = ctx.createBufferSource(); src.buffer = ab; src.connect(ctx.destination);
