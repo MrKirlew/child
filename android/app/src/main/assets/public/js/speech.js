@@ -396,6 +396,53 @@ async function _playPCMSingle(base64) {
   src.start();
 }
 
+// Play PCM chunk — returns Promise, does NOT touch VIZ (caller manages visualizer)
+function _playPCMChunk(base64) {
+  return new Promise(async (resolve) => {
+    const ctx = getAudioCtx(); if (ctx.state === 'suspended') await ctx.resume();
+    const raw = atob(base64); const buf = new Int16Array(raw.length / 2);
+    for (let i = 0; i < buf.length; i++) buf[i] = raw.charCodeAt(i * 2) | (raw.charCodeAt(i * 2 + 1) << 8);
+    const float = new Float32Array(buf.length);
+    for (let i = 0; i < buf.length; i++) float[i] = buf[i] / 32768;
+    const ab = ctx.createBuffer(1, float.length, 24000);
+    ab.getChannelData(0).set(float);
+    const src = ctx.createBufferSource(); src.buffer = ab; src.connect(ctx.destination);
+    src.onended = resolve;
+    src.start();
+  });
+}
+
+// REST-only TTS — bypasses Live API WebSocket. Use for Exercise, Spell, and Badge TTS.
+// Chunks at sentence boundaries (max 2 sentences per TTS call) per CLAUDE.md TTS Chunking rule.
+async function speakDirect(txt) {
+  const clean = txt.replace(/[*_~`#]/g, '').substring(0, 800);
+  const sentences = clean.match(/[^.!?]+[.!?]+/g) || [clean];
+  const chunks = [];
+  for (let i = 0; i < sentences.length; i += 2) {
+    chunks.push(sentences.slice(i, i + 2).join(' ').trim());
+  }
+  VIZ.start();
+  for (const chunk of chunks) {
+    if (!chunk) continue;
+    let played = false;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const r = await fetch(window.AI_PROXY + '/ai/speak', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: chunk, voice: 'Kore' })
+        });
+        if (r.ok) {
+          const d = await r.json();
+          if (d.audio) { await _playPCMChunk(d.audio); played = true; break; }
+        }
+      } catch (_e) { /* retry */ }
+      if (attempt === 0) await new Promise(r => setTimeout(r, 500));
+    }
+    if (!played) break;
+  }
+  VIZ.stop();
+}
+
 function stopAll() {
   _stopPlayback();
   VIZ.stop();
@@ -436,12 +483,20 @@ function togExMic() {
 }
 function stopEMic() { if (_esr) _esr.stop(); _esr = null; _emic = false; micUI('exmic', false); }
 
-// Android speech callbacks (exercise tab only now)
+// Android speech callbacks
 function onAndroidSpeechResult(t) {
+  // Spell tab mic
+  if (window._spellMicActive) {
+    window._spellMicActive = false;
+    const word = (t || '').trim();
+    if (word) { document.getElementById('spell-inp').value = word; spellWord(); }
+    return;
+  }
   if (_speechTarget === 'exercise') { stopEMic(); document.getElementById('vatr').textContent = t; handleVoiceAns(t); }
 }
 function onAndroidSpeechError(reason) {
   const msg = reason || "Couldn't hear you";
   reportError('speech', msg, _speechTarget);
+  if (window._spellMicActive) { window._spellMicActive = false; return; }
   if (_speechTarget === 'exercise') { stopEMic(); document.getElementById('vatr').textContent = msg; }
 }

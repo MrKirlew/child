@@ -9,7 +9,51 @@
 
 | File | Entries | Date Range |
 |------|---------|------------|
-| PROJECT_SUMMARY.md | 19 | 2025-04-07 – present |
+| PROJECT_SUMMARY.md | 22 | 2025-04-07 – present |
+
+---
+
+## 2026-04-10-S4 — Voice Tone Modes + Voice-Only Enforcement
+**Session:** 2026-04-09-S4
+**Member:** Dev Lead + AI Engineer
+**Task:** Fixed 3 issues: (1) Added "Normal" mode (default) — friendly teacher at natural volume, no whispering or yelling. (2) Toned down "Excited" mode from screaming to enthusiastic. (3) Massively strengthened voice-only enforcement in system prompt v8 — explicit forbidden phrases (show me, look at, point to, draw, etc.) with replacement phrases (tell me, say it out loud, imagine), framed as "you are blind and so is the child." Parent dashboard now shows 4 tone options: Normal, Excited, Calm, Night.
+**Gate:** 25/25 CLEARED
+**Changed files:** www/js/ai.js, www/js/ui.js, www/index.html, CHANGELOG.md
+**Blocks:** None
+**Pending:** None
+
+---
+
+## 2026-04-10-S4 — Spell Center: Phonetics + Voice Input
+**Session:** 2026-04-09-S4
+**Member:** Dev Lead + AI Engineer + UX Guardian
+**Task:** Enhanced Spell Center with two new features: (1) Phonetic pronunciation guide — every word lookup now returns letters + meaning + "how to say it" breakdown. (2) Mic button — child can say a word out loud (Android SpeechPlugin + Web Speech API fallback) and it goes through the same spell flow. Removed separate challenge card per user feedback. History items also cache and show phonetics.
+**Gate:** 25/25 CLEARED
+**Changed files:** www/index.html, www/js/ui.js, www/js/speech.js, www/css/main.css, eslint.config.js, CHANGELOG.md
+**Blocks:** None
+**Pending:** None
+
+---
+
+## 2026-04-10-S4 — Spelling Challenge Feature (replaced)
+**Session:** 2026-04-09-S4
+**Member:** Dev Lead + AI Engineer + UX Guardian (full team)
+**Task:** New "Challenge Me!" feature in Spell Center. AI picks a grade-appropriate word, says it via speakDirect. Child has 3-minute countdown timer to type spelling. "Hear Again" button replays the word. On submit or timeout: reveals correct word with letter boxes, brief definition, and phonetic pronunciation guide. Timer turns red at 30s. Adds word to history + tracks spelling badge. Night mode support. All deployed to Vercel + Pixel 7 Pro.
+**Gate:** 25/25 CLEARED
+**Changed files:** www/index.html, www/js/ui.js, www/css/main.css, eslint.config.js, CHANGELOG.md
+**Blocks:** None
+**Pending:** None
+
+---
+
+## 2026-04-09-S4 — Fix TTS Routing + Deploy
+**Session:** 2026-04-09-S4
+**Member:** Dev Lead + AI Engineer + QA Lead (full team)
+**Task:** Fixed critical TTS routing bug: speak() was routing Exercise/Spell/Badge TTS through Live API WebSocket as conversation turns, causing Ollie to answer exercise questions. Added speakDirect() (REST-only TTS with sentence chunking). Fixed spell history tap to show cached result (no redundant API call). Fixed CI Java 17→21. Committed, pushed, deployed to Vercel production + Pixel 7 Pro APK.
+**Gate:** 25/25 CLEARED (lint 0 errors, 21/21 tests, APK built, Vercel deployed, health check OK)
+**Changed files:** www/js/speech.js, www/js/exercises.js, www/js/ui.js, www/js/progress.js, eslint.config.js, .github/workflows/ci.yml, .gitignore, CHANGELOG.md
+**Blocks:** None
+**Pending:** CI health check flaky due to transient Gemini 429 — consider adding retry to health check curl in CI
 
 ---
 

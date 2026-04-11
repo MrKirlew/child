@@ -1,5 +1,5 @@
 /* ══ EXERCISE SYSTEM ══ */
-/* globals: S, SUBS, SCOL, GN, CUREX, aiGenerate, speak, esc, reportError, saveS, checkBadges */
+/* globals: S, SUBS, SCOL, GN, CUREX, aiGenerate, speakDirect, esc, reportError, saveS, checkBadges */
 let CUREX = null;
 
 const EXPM = () => {
@@ -63,21 +63,21 @@ function renderEx(ex) {
     document.getElementById('mcopts').style.display = 'grid';
     ex.options.forEach((opt, i) => { const e = document.getElementById('o' + i); e.className = 'mco'; e.textContent = String.fromCharCode(65 + i) + '. ' + opt; });
     document.getElementById('exsubmit').style.display = 'none';
-    speak(ex.question);
+    speakDirect(ex.question);
   } else if (ex.type === 'fill_blank') {
     document.getElementById('exq').textContent = ex.sentence || ex.question;
     document.getElementById('fbwrap').style.display = 'block';
     document.getElementById('vawrap').style.display = 'block';
     document.getElementById('vahint').textContent = 'Type or speak the missing word 🎤';
     document.getElementById('exsubmit').style.display = 'block';
-    speak(ex.sentence || ex.question);
+    speakDirect(ex.sentence || ex.question);
   } else {
     document.getElementById('exq').textContent = ex.question;
     document.getElementById('fbwrap').style.display = 'block';
     document.getElementById('vawrap').style.display = 'block';
     document.getElementById('vahint').textContent = 'Speak or type your answer 🎤';
     document.getElementById('exsubmit').style.display = 'block';
-    speak(ex.question);
+    speakDirect(ex.question);
   }
 }
 
@@ -95,7 +95,7 @@ function pickMC(idx) {
 function submitFB() {
   if (!CUREX) return;
   const ans = document.getElementById('fbinp').value.trim() || document.getElementById('vatr').textContent.trim();
-  if (!ans) { speak('Please type or say your answer first!'); return; }
+  if (!ans) { speakDirect('Please type or say your answer first!'); return; }
   checkVoice(ans);
 }
 
@@ -104,7 +104,7 @@ function handleVoiceAns(txt) {
   if (CUREX.type === 'multiple_choice') {
     const t = txt.toLowerCase(); const letters = ['a', 'b', 'c', 'd']; let idx = -1;
     for (let i = 0; i < 4; i++) { if (t.includes(letters[i]) || (CUREX.options[i] && t.includes(CUREX.options[i].toLowerCase()))) idx = i; }
-    if (idx >= 0) pickMC(idx); else speak('I heard: ' + txt + '. Try saying A, B, C, or D!');
+    if (idx >= 0) pickMC(idx); else speakDirect('I heard: ' + txt + '. Try saying A, B, C, or D!');
   } else checkVoice(txt);
 }
 
@@ -135,7 +135,7 @@ function finishEx(ok, explanation, correctAns) {
   S.recentEx.unshift({ sub: exSub, correct: ok, q: (CUREX.question || CUREX.sentence || '').substring(0, 45) });
   if (S.recentEx.length > 12) S.recentEx.pop();
   saveS(); checkBadges(); updScoreBar();
-  speak(fb.textContent.replace(/[✅❌🔥💪]/g, '').substring(0, 200));
+  speakDirect(fb.textContent.replace(/[✅❌🔥💪]/g, '').substring(0, 200));
   document.getElementById('exnext').style.display = 'block';
   document.getElementById('exnew').style.display = 'none';
 }

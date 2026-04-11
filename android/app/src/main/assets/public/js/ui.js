@@ -1,8 +1,8 @@
 /* ══ UI ══ */
-/* globals: S, SUBS, SCOL, saveS, updProg, updScoreBar, addBub, speak, VIZ, hashPin */
+/* globals: S, SUBS, SCOL, saveS, updProg, updScoreBar, addBub, speak, speakDirect, VIZ, hashPin, esc, sendLiveText, connectLive, sendL, aiGenerate, checkBadges */
 
 function showTab(t) { ['learn', 'ex', 'spell', 'prog'].forEach(id => { document.getElementById('tab-' + id).classList.toggle('on', id === t); document.getElementById('tb-' + id).classList.toggle('on', id === t); }); if (t === 'prog') updProg(); }
-function setMode(m) { S.mode = m; saveS(); document.body.className = m === 'exciting' ? '' : 'mode-' + m; document.querySelectorAll('[data-mode]').forEach(e => e.classList.toggle('on', e.dataset.mode === m)); }
+function setMode(m) { S.mode = m; saveS(); document.body.className = (m === 'normal' || m === 'excited') ? '' : 'mode-' + m; document.querySelectorAll('[data-mode]').forEach(e => e.classList.toggle('on', e.dataset.mode === m)); }
 function setDiff(d) { S.diff = d; saveS(); document.querySelectorAll('[data-d]').forEach(e => e.classList.toggle('on', e.dataset.d === d)); }
 function setListenWait(s) { S.listenWait = s; saveS(); document.querySelectorAll('[data-lw]').forEach(e => e.classList.toggle('on', parseInt(e.dataset.lw, 10) === s)); }
 function pickGrade(g) { S.grade = g; S.chatHist = []; saveS(); document.getElementById('glbl').textContent = g; document.querySelectorAll('#gpr .pl').forEach(e => e.classList.toggle('on', e.dataset.g === g)); }
@@ -22,7 +22,7 @@ function openDash() {
   const dailyTokens = _getDailyTokens();
   const tokenWarn = dailyTokens > 50000 ? `<div style="background:rgba(245,158,11,.12);border:1.5px solid rgba(245,158,11,.3);border-radius:10px;padding:8px;margin-bottom:8px;font-size:11px;font-weight:700;color:#D97706;text-align:center">High usage today: ~${Math.round(dailyTokens / 1000)}k tokens</div>` : '';
   document.getElementById('d-stats').innerHTML = tokenWarn + `<div class="sc2"><div class="sn2">${tot}</div><div class="sl2">Exercises</div></div><div class="sc2"><div class="sn2">${S.earnedBadges.length}</div><div class="sl2">Badges</div></div><div class="sc2"><div class="sn2">${S.bestStreak}</div><div class="sl2">Best Streak</div></div><div class="sc2"><div class="sn2">Gr.${S.grade}</div><div class="sl2">Grade</div></div>`;
-  document.querySelectorAll('#mpr [data-mode]').forEach(e => e.classList.toggle('on', e.dataset.mode === (S.mode || 'exciting')));
+  document.querySelectorAll('#mpr [data-mode]').forEach(e => e.classList.toggle('on', e.dataset.mode === (S.mode || 'normal')));
   document.querySelectorAll('#dpr [data-d]').forEach(e => e.classList.toggle('on', e.dataset.d === S.diff));
   document.querySelectorAll('#lwr [data-lw]').forEach(e => e.classList.toggle('on', parseInt(e.dataset.lw, 10) === (S.listenWait || 30)));
   const mx = Math.max(...Object.values(S.ex).map(e => e.t), 1);
@@ -65,37 +65,94 @@ async function spellWord() {
   document.getElementById('spell-load').style.display = 'block';
   document.getElementById('spell-result').style.display = 'none';
   try {
-    const prompt = `The child typed the word "${word}". Spell it out letter by letter and give a short kid-friendly meaning (1 sentence for a ${S.grade === 'K' ? 'kindergartner' : 'grade ' + S.grade + ' student'}). Return ONLY JSON: {"word":"${word}","letters":["c","a","t"],"meaning":"A small furry pet that purrs."}`;
-    const raw = await aiGenerate(prompt, '', 200);
+    const grade = S.grade === 'K' ? 'kindergartner' : 'grade ' + S.grade + ' student';
+    const prompt = `The child wants to learn the word "${word}". Return ONLY JSON: {"word":"${word}","letters":["c","a","t"],"meaning":"A short kid-friendly definition (1 sentence for a ${grade}).","phonics":"Break it into sounds with pronunciation guide, e.g. cat: k-ae-t (KAT). Show syllables and how to sound it out."}`;
+    const raw = await aiGenerate(prompt, '', 250);
     let result;
-    try { result = JSON.parse(raw.replace(/```json|```/g, '').trim()); } catch (_e) { result = { word: word, letters: word.split(''), meaning: 'A great word to learn!' }; }
-    // Display result
-    document.getElementById('spell-word').textContent = result.word || word;
-    document.getElementById('spell-letters').innerHTML = (result.letters || word.split('')).map(l => `<div class="sp-letter">${esc(l)}</div>`).join('');
-    document.getElementById('spell-meaning').textContent = result.meaning || '';
-    document.getElementById('spell-result').style.display = 'block';
-    // Speak it
-    speak(`${word}. ${(result.letters || word.split('')).join(', ')}. ${word}. ${result.meaning || ''}`);
+    try { result = JSON.parse(raw.replace(/```json|```/g, '').trim()); } catch (_e) { result = { word: word, letters: word.split(''), meaning: 'A great word to learn!', phonics: '' }; }
+    _showSpellResult(result, word);
+    // Speak: word, letters, definition, phonics
+    const letters = (result.letters || word.split('')).join(', ');
+    speakDirect(`${word}. ${letters}. ${word}. ${result.meaning || ''}. ${result.phonics || ''}`);
     // Add to history
-    _spellHistory.unshift({ word: result.word || word, meaning: result.meaning || '' });
+    _spellHistory.unshift({ word: result.word || word, letters: result.letters || word.split(''), meaning: result.meaning || '', phonics: result.phonics || '' });
     if (_spellHistory.length > 20) _spellHistory.pop();
-    _saveSpellHistory();
-    _renderSpellHistory();
-    // Track for badges
+    _saveSpellHistory(); _renderSpellHistory();
     S.cnt.Spelling = (S.cnt.Spelling || 0) + 1; saveS(); checkBadges();
   } catch (e) {
     console.error('[KiddoAI] spellWord error:', e.message);
     document.getElementById('spell-meaning').textContent = 'Oops! Could not look up that word. Try again!';
+    document.getElementById('spell-phonics').textContent = '';
     document.getElementById('spell-result').style.display = 'block';
   }
   document.getElementById('spell-load').style.display = 'none';
   btn.disabled = false;
 }
 
+function _showSpellResult(result, fallbackWord) {
+  const word = result.word || fallbackWord;
+  document.getElementById('spell-word').textContent = word;
+  document.getElementById('spell-letters').innerHTML = (result.letters || word.split('')).map(l => `<div class="sp-letter">${esc(l)}</div>`).join('');
+  document.getElementById('spell-meaning').innerHTML = '<strong>📖 Meaning:</strong> ' + esc(result.meaning || '');
+  document.getElementById('spell-phonics').innerHTML = (result.phonics) ? '<strong>🔤 How to say it:</strong> ' + esc(result.phonics) : '';
+  document.getElementById('spell-phonics').style.display = result.phonics ? 'block' : 'none';
+  document.getElementById('spell-result').style.display = 'block';
+}
+
+function showSpellResult(idx) {
+  if (idx < 0 || idx >= _spellHistory.length) return;
+  const h = _spellHistory[idx];
+  document.getElementById('spell-inp').value = '';
+  _showSpellResult(h, h.word);
+  const letters = (h.letters || h.word.split('')).join(', ');
+  speakDirect(`${h.word}. ${letters}. ${h.word}. ${h.meaning || ''}. ${h.phonics || ''}`);
+}
+
+/* ══ SPELL MIC — say a word out loud ══ */
+let _spellSR = null, _spellMicOn = false;
+function togSpellMic() {
+  if (_spellMicOn) { _stopSpellMic(); return; }
+  // Android native
+  if (NB.ok) {
+    _spellMicOn = true;
+    document.getElementById('spell-mic').textContent = '⏹';
+    document.getElementById('spell-listening').style.display = 'block';
+    window._spellMicActive = true;
+    NB.call('startListening');
+    return;
+  }
+  // Web Speech API fallback
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) { document.getElementById('spell-listening').textContent = 'Speech not available on this device'; document.getElementById('spell-listening').style.display = 'block'; return; }
+  _spellSR = new SR(); _spellSR.lang = 'en-US'; _spellSR.interimResults = true;
+  _spellMicOn = true;
+  document.getElementById('spell-mic').textContent = '⏹';
+  document.getElementById('spell-listening').style.display = 'block';
+  _spellSR.onresult = e => {
+    const t = Array.from(e.results).map(r => r[0].transcript).join('');
+    document.getElementById('spell-listening').textContent = '🎤 Heard: ' + t;
+    if (e.results[e.results.length - 1].isFinal) {
+      _stopSpellMic();
+      const word = t.trim();
+      if (word) { document.getElementById('spell-inp').value = word; spellWord(); }
+    }
+  };
+  _spellSR.onend = () => _stopSpellMic();
+  _spellSR.onerror = () => { _stopSpellMic(); document.getElementById('spell-listening').textContent = ''; };
+  _spellSR.start();
+}
+function _stopSpellMic() {
+  if (_spellSR) _spellSR.stop(); _spellSR = null;
+  _spellMicOn = false;
+  window._spellMicActive = false;
+  document.getElementById('spell-mic').textContent = '🎤';
+  document.getElementById('spell-listening').style.display = 'none';
+}
+
 function _renderSpellHistory() {
   const el = document.getElementById('spell-history');
   if (!_spellHistory.length) { el.innerHTML = '<p style="color:var(--muted);font-size:12px;padding:6px 0">Type a word above to get started!</p>'; return; }
-  el.innerHTML = _spellHistory.map(h => `<div class="sp-hist" onclick="document.getElementById('spell-inp').value='${esc(h.word)}';spellWord()"><div class="sp-hw">${esc(h.word)}</div><div class="sp-hm">${esc(h.meaning)}</div></div>`).join('');
+  el.innerHTML = _spellHistory.map((h, i) => `<div class="sp-hist" onclick="showSpellResult(${i})"><div class="sp-hw">${esc(h.word)}</div><div class="sp-hm">${esc(h.meaning)}</div></div>`).join('');
 }
 
 /* ══ COPPA CONSENT ══ */
@@ -109,7 +166,7 @@ async function startApp() {
   document.getElementById('glbl').textContent = S.grade;
   document.querySelectorAll('[data-d]').forEach(e => e.classList.toggle('on', e.dataset.d === S.diff));
   VIZ.ini(); updScoreBar(); updProg(); _renderSpellHistory();
-  setMode(S.mode || 'exciting');
+  setMode(S.mode || 'normal');
   const welcomeMsg = 'Hi superstar! I\'m Ollie the Owl! Tap the microphone button to talk to me about anything, or go to Exercises for fun quizzes!';
   // Connect Live API and have Ollie speak — transcript creates the single chat bubble
   try {

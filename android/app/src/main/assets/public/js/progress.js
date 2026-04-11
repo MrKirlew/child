@@ -1,5 +1,5 @@
 /* ══ PROGRESS TAB ══ */
-/* globals: S, SUBS, SCOL, BADGES, esc, saveS, addBub, speak */
+/* globals: S, SUBS, SCOL, BADGES, esc, saveS, addBub, speakDirect */
 
 function updProg() {
   const tot = Object.values(S.ex).reduce((a, b) => a + b.t, 0), cor = Object.values(S.ex).reduce((a, b) => a + b.c, 0);
@@ -25,7 +25,7 @@ function checkBadges() {
     if (!S.earnedBadges.includes(b.id) && b.chk(S)) {
       S.earnedBadges.push(b.id); ch = true;
       addBub('ai', `You just earned the **${b.icon} ${b.name}** badge! Incredible!`, { lessonType: 'Badge!' });
-      speak(`Amazing! You earned a new badge: ${b.name}!`);
+      speakDirect(`Amazing! You earned a new badge: ${b.name}!`);
     }
   });
   if (ch) saveS();
