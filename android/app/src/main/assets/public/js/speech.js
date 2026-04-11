@@ -5,7 +5,7 @@ const LIVE_MODELS = ['models/gemini-2.5-flash-native-audio-preview-12-2025', 'mo
 let _liveModelIdx = 0;
 
 let _ws = null, _micStream = null, _micProcessor = null, _audioCtx = null;
-let _conversing = false, _lmic = false, _playQueue = [], _playing = false, _audioSrc = null;
+let _conversing = false, _lmic = false, _playQueue = [], _playing = false, _audioSrc = null, _nextPlayTime = 0, _scheduledSrcs = [];
 let _listenTimer = null;
 let _transcript = ''; // accumulates model's spoken text for chat bubble
 let _inputTranscript = ''; // accumulates child's speech for chat bubble
@@ -110,13 +110,15 @@ async function _handleServerMsg(ev) {
     return;
   }
 
-  // Child's speech transcription — show in chat
+  // Child's speech transcription — show in chat + reset listen timer (child is active)
   if (msg.serverContent && msg.serverContent.inputTranscription && msg.serverContent.inputTranscription.text) {
     _inputTranscript += msg.serverContent.inputTranscription.text;
+    _resetListenTimer();
   }
 
-  // Audio response from model — flush child's speech bubble first
+  // Audio response from model — flush child's speech bubble first, reset timer (Ollie is responding)
   if (msg.serverContent && msg.serverContent.modelTurn && msg.serverContent.modelTurn.parts) {
+    _resetListenTimer();
     if (_inputTranscript.trim()) {
       const userText = _inputTranscript.trim();
       addBub('user', userText, {});
@@ -136,8 +138,9 @@ async function _handleServerMsg(ev) {
     _transcript += msg.serverContent.outputTranscription.text;
   }
 
-  // Turn complete — model finished speaking
+  // Turn complete — model finished speaking, reset listen timer (Ollie just finished, child's turn)
   if (msg.serverContent && msg.serverContent.turnComplete) {
+    _resetListenTimer();
     if (_transcript.trim()) {
       // Parse JSON if the model returned it (from system prompt), otherwise use raw text
       let displayText = _transcript.trim();
@@ -169,36 +172,40 @@ function _detectSubject(text) {
   return 'Comprehension';
 }
 
-/* ══ AUDIO PLAYBACK — queue PCM chunks for gapless play ══ */
+/* ══ AUDIO PLAYBACK — gapless scheduled playback via AudioContext clock ══ */
 function _queueAudio(base64) {
-  _playQueue.push(base64);
-  if (!_playing) _playNext();
+  if (!_playing) { _playing = true; VIZ.start(); }
+  _scheduleChunk(base64);
 }
 
-async function _playNext() {
-  if (_playQueue.length === 0) { _playing = false; VIZ.stop(); return; }
-  _playing = true;
-  VIZ.start();
-  const base64 = _playQueue.shift();
+async function _scheduleChunk(base64) {
   const ctx = getAudioCtx();
   if (ctx.state === 'suspended') await ctx.resume();
-  const raw = atob(base64);
-  const buf = new Int16Array(raw.length / 2);
-  for (let i = 0; i < buf.length; i++) buf[i] = raw.charCodeAt(i * 2) | (raw.charCodeAt(i * 2 + 1) << 8);
-  const float = new Float32Array(buf.length);
-  for (let i = 0; i < buf.length; i++) float[i] = buf[i] / 32768;
+  const float = _decodePCM(base64);
   const ab = ctx.createBuffer(1, float.length, 24000);
   ab.getChannelData(0).set(float);
-  _audioSrc = ctx.createBufferSource();
-  _audioSrc.buffer = ab;
-  _audioSrc.connect(ctx.destination);
-  _audioSrc.onended = () => _playNext();
-  _audioSrc.start();
+  const src = ctx.createBufferSource();
+  src.buffer = ab;
+  src.connect(ctx.destination);
+  // Schedule precisely on the AudioContext timeline — no JS callback gaps
+  const now = ctx.currentTime;
+  const startAt = Math.max(now + 0.005, _nextPlayTime); // 5ms minimum lead time
+  _nextPlayTime = startAt + ab.duration;
+  src.onended = () => {
+    _scheduledSrcs = _scheduledSrcs.filter(s => s !== src);
+    // If no more scheduled sources and queue is empty, playback is done
+    if (_scheduledSrcs.length === 0) { _playing = false; VIZ.stop(); }
+  };
+  _scheduledSrcs.push(src);
+  src.start(startAt);
 }
 
 function _stopPlayback() {
   _playQueue = [];
   _playing = false;
+  _nextPlayTime = 0;
+  _scheduledSrcs.forEach(s => { try { s.stop(); } catch (_e) { /* already stopped */ } });
+  _scheduledSrcs = [];
   if (_audioSrc) { try { _audioSrc.stop(); } catch (_e) { /* already stopped */ } _audioSrc = null; }
 }
 
@@ -216,7 +223,7 @@ async function _requestMicPermission() {
 async function _startMicStream() {
   if (_micStream) return;
   await _requestMicPermission();
-  const stream = await navigator.mediaDevices.getUserMedia({ audio: { sampleRate: 16000, channelCount: 1, echoCancellation: true, noiseSuppression: true } });
+  const stream = await navigator.mediaDevices.getUserMedia({ audio: { sampleRate: 16000, channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
   _micStream = stream;
   const ctx = new AudioContext({ sampleRate: 16000 });
   const source = ctx.createMediaStreamSource(stream);
@@ -236,7 +243,11 @@ async function _startMicStream() {
     }));
   };
   source.connect(_micProcessor);
-  _micProcessor.connect(ctx.destination); // required for ScriptProcessorNode to fire
+  // Connect to a silent gain node — ScriptProcessorNode needs a destination to fire, but we must NOT play mic audio through speakers (causes static/feedback)
+  const silentGain = ctx.createGain();
+  silentGain.gain.value = 0;
+  silentGain.connect(ctx.destination);
+  _micProcessor.connect(silentGain);
 }
 
 function _stopMicStream() {
@@ -295,6 +306,15 @@ async function connectLive() {
   throw new Error('All Live API models failed to connect');
 }
 
+// Reset listen timer — called on every activity so conversation stays alive during back-and-forth
+function _resetListenTimer() {
+  if (!_conversing) return;
+  clearTimeout(_listenTimer);
+  _listenTimer = setTimeout(() => {
+    if (_conversing) { stopConversation(); document.getElementById('slbl').textContent = 'Tap 🎤 if you need anything!'; }
+  }, (S.listenWait || 30) * 1000);
+}
+
 // Start/stop conversation (Learn tab mic button)
 async function togLMic() {
   if (_conversing) { stopConversation(); return; }
@@ -314,10 +334,7 @@ async function startConversation() {
     document.getElementById('slbl').textContent = 'Starting mic...';
     await _startMicStream();
     document.getElementById('slbl').textContent = 'Listening... tap 🎤 to stop';
-    clearTimeout(_listenTimer);
-    _listenTimer = setTimeout(() => {
-      if (_conversing) { stopConversation(); document.getElementById('slbl').textContent = 'Tap 🎤 if you need anything!'; }
-    }, (S.listenWait || 30) * 1000);
+    _resetListenTimer();
   } catch (e) {
     reportError('live', e.message, 'startConversation');
     const isPermission = e.message && (e.message.includes('Permission') || e.message.includes('NotAllowed') || e.message.includes('permission'));
@@ -383,12 +400,22 @@ async function speak(txt) {
   VIZ.stop();
 }
 
-async function _playPCMSingle(base64) {
-  const ctx = getAudioCtx(); if (ctx.state === 'suspended') await ctx.resume();
-  const raw = atob(base64); const buf = new Int16Array(raw.length / 2);
+// Decode base64 PCM to Float32 with edge smoothing
+function _decodePCM(base64) {
+  const raw = atob(base64);
+  const buf = new Int16Array(raw.length / 2);
   for (let i = 0; i < buf.length; i++) buf[i] = raw.charCodeAt(i * 2) | (raw.charCodeAt(i * 2 + 1) << 8);
   const float = new Float32Array(buf.length);
   for (let i = 0; i < buf.length; i++) float[i] = buf[i] / 32768;
+  // 48-sample (~2ms) fade-in/fade-out to prevent clicks
+  const fade = Math.min(48, float.length >> 1);
+  for (let i = 0; i < fade; i++) { float[i] *= i / fade; float[float.length - 1 - i] *= i / fade; }
+  return float;
+}
+
+async function _playPCMSingle(base64) {
+  const ctx = getAudioCtx(); if (ctx.state === 'suspended') await ctx.resume();
+  const float = _decodePCM(base64);
   const ab = ctx.createBuffer(1, float.length, 24000);
   ab.getChannelData(0).set(float);
   const src = ctx.createBufferSource(); src.buffer = ab; src.connect(ctx.destination);
@@ -400,10 +427,7 @@ async function _playPCMSingle(base64) {
 function _playPCMChunk(base64) {
   return new Promise(async (resolve) => {
     const ctx = getAudioCtx(); if (ctx.state === 'suspended') await ctx.resume();
-    const raw = atob(base64); const buf = new Int16Array(raw.length / 2);
-    for (let i = 0; i < buf.length; i++) buf[i] = raw.charCodeAt(i * 2) | (raw.charCodeAt(i * 2 + 1) << 8);
-    const float = new Float32Array(buf.length);
-    for (let i = 0; i < buf.length; i++) float[i] = buf[i] / 32768;
+    const float = _decodePCM(base64);
     const ab = ctx.createBuffer(1, float.length, 24000);
     ab.getChannelData(0).set(float);
     const src = ctx.createBufferSource(); src.buffer = ab; src.connect(ctx.destination);
