@@ -110,13 +110,15 @@ async function _handleServerMsg(ev) {
     return;
   }
 
-  // Child's speech transcription — show in chat
+  // Child's speech transcription — show in chat + reset listen timer (child is active)
   if (msg.serverContent && msg.serverContent.inputTranscription && msg.serverContent.inputTranscription.text) {
     _inputTranscript += msg.serverContent.inputTranscription.text;
+    _resetListenTimer();
   }
 
-  // Audio response from model — flush child's speech bubble first
+  // Audio response from model — flush child's speech bubble first, reset timer (Ollie is responding)
   if (msg.serverContent && msg.serverContent.modelTurn && msg.serverContent.modelTurn.parts) {
+    _resetListenTimer();
     if (_inputTranscript.trim()) {
       const userText = _inputTranscript.trim();
       addBub('user', userText, {});
@@ -136,8 +138,9 @@ async function _handleServerMsg(ev) {
     _transcript += msg.serverContent.outputTranscription.text;
   }
 
-  // Turn complete — model finished speaking
+  // Turn complete — model finished speaking, reset listen timer (Ollie just finished, child's turn)
   if (msg.serverContent && msg.serverContent.turnComplete) {
+    _resetListenTimer();
     if (_transcript.trim()) {
       // Parse JSON if the model returned it (from system prompt), otherwise use raw text
       let displayText = _transcript.trim();
@@ -295,6 +298,15 @@ async function connectLive() {
   throw new Error('All Live API models failed to connect');
 }
 
+// Reset listen timer — called on every activity so conversation stays alive during back-and-forth
+function _resetListenTimer() {
+  if (!_conversing) return;
+  clearTimeout(_listenTimer);
+  _listenTimer = setTimeout(() => {
+    if (_conversing) { stopConversation(); document.getElementById('slbl').textContent = 'Tap 🎤 if you need anything!'; }
+  }, (S.listenWait || 30) * 1000);
+}
+
 // Start/stop conversation (Learn tab mic button)
 async function togLMic() {
   if (_conversing) { stopConversation(); return; }
@@ -314,10 +326,7 @@ async function startConversation() {
     document.getElementById('slbl').textContent = 'Starting mic...';
     await _startMicStream();
     document.getElementById('slbl').textContent = 'Listening... tap 🎤 to stop';
-    clearTimeout(_listenTimer);
-    _listenTimer = setTimeout(() => {
-      if (_conversing) { stopConversation(); document.getElementById('slbl').textContent = 'Tap 🎤 if you need anything!'; }
-    }, (S.listenWait || 30) * 1000);
+    _resetListenTimer();
   } catch (e) {
     reportError('live', e.message, 'startConversation');
     const isPermission = e.message && (e.message.includes('Permission') || e.message.includes('NotAllowed') || e.message.includes('permission'));
