@@ -21,6 +21,7 @@ Format: `- [type] description` — types: `feat`, `fix`, `refactor`, `chore`
 - [fix] Audio static: stopped mic audio from playing through speakers (ScriptProcessorNode was connected to destination — now routes through silent gain node)
 - [fix] Audio clicks: added 2ms fade-in/fade-out at PCM chunk boundaries to eliminate pops between audio segments
 - [fix] Mic capture: added autoGainControl to getUserMedia for cleaner input levels
+- [fix] Audio choppiness: replaced callback-chain playback with gapless scheduled playback using AudioContext clock timing — chunks now play seamlessly with zero JS-callback gaps
 - [refactor] Split www/index.html (898→322 lines) into www/css/main.css + www/js/{ai,speech,exercises,progress,ui}.js
 - [fix] SHA-256 PIN hashing — parent PIN stored as hash, never plain text. Auto-migrates existing PINs.
 - [fix] health.js makes real Gemini API ping with 8s timeout instead of static 200

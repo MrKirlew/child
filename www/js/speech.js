@@ -5,7 +5,7 @@ const LIVE_MODELS = ['models/gemini-2.5-flash-native-audio-preview-12-2025', 'mo
 let _liveModelIdx = 0;
 
 let _ws = null, _micStream = null, _micProcessor = null, _audioCtx = null;
-let _conversing = false, _lmic = false, _playQueue = [], _playing = false, _audioSrc = null;
+let _conversing = false, _lmic = false, _playQueue = [], _playing = false, _audioSrc = null, _nextPlayTime = 0, _scheduledSrcs = [];
 let _listenTimer = null;
 let _transcript = ''; // accumulates model's spoken text for chat bubble
 let _inputTranscript = ''; // accumulates child's speech for chat bubble
@@ -172,32 +172,40 @@ function _detectSubject(text) {
   return 'Comprehension';
 }
 
-/* ══ AUDIO PLAYBACK — queue PCM chunks for gapless play ══ */
+/* ══ AUDIO PLAYBACK — gapless scheduled playback via AudioContext clock ══ */
 function _queueAudio(base64) {
-  _playQueue.push(base64);
-  if (!_playing) _playNext();
+  if (!_playing) { _playing = true; VIZ.start(); }
+  _scheduleChunk(base64);
 }
 
-async function _playNext() {
-  if (_playQueue.length === 0) { _playing = false; VIZ.stop(); return; }
-  _playing = true;
-  VIZ.start();
-  const base64 = _playQueue.shift();
+async function _scheduleChunk(base64) {
   const ctx = getAudioCtx();
   if (ctx.state === 'suspended') await ctx.resume();
   const float = _decodePCM(base64);
   const ab = ctx.createBuffer(1, float.length, 24000);
   ab.getChannelData(0).set(float);
-  _audioSrc = ctx.createBufferSource();
-  _audioSrc.buffer = ab;
-  _audioSrc.connect(ctx.destination);
-  _audioSrc.onended = () => _playNext();
-  _audioSrc.start();
+  const src = ctx.createBufferSource();
+  src.buffer = ab;
+  src.connect(ctx.destination);
+  // Schedule precisely on the AudioContext timeline — no JS callback gaps
+  const now = ctx.currentTime;
+  const startAt = Math.max(now + 0.005, _nextPlayTime); // 5ms minimum lead time
+  _nextPlayTime = startAt + ab.duration;
+  src.onended = () => {
+    _scheduledSrcs = _scheduledSrcs.filter(s => s !== src);
+    // If no more scheduled sources and queue is empty, playback is done
+    if (_scheduledSrcs.length === 0) { _playing = false; VIZ.stop(); }
+  };
+  _scheduledSrcs.push(src);
+  src.start(startAt);
 }
 
 function _stopPlayback() {
   _playQueue = [];
   _playing = false;
+  _nextPlayTime = 0;
+  _scheduledSrcs.forEach(s => { try { s.stop(); } catch (_e) { /* already stopped */ } });
+  _scheduledSrcs = [];
   if (_audioSrc) { try { _audioSrc.stop(); } catch (_e) { /* already stopped */ } _audioSrc = null; }
 }
 
