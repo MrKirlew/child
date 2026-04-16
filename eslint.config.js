@@ -26,7 +26,7 @@ module.exports = [
       globals: {
         ...globals.browser,
         // Shared state from index.html inline script
-        S: 'writable', SUBS: 'readonly', SCOL: 'readonly', GN: 'readonly', DN: 'readonly', SN: 'readonly',
+        S: 'writable', SUBS: 'readonly', EX_SUBS: 'readonly', EX_EMOJI: 'readonly', SCOL: 'readonly', GN: 'readonly', DN: 'readonly', SN: 'readonly',
         BADGES: 'readonly', VIZ: 'readonly', AI_PROXY: 'readonly',
         saveS: 'readonly', loadS: 'readonly', esc: 'readonly', fmt: 'readonly',
         addBub: 'readonly', addTyp: 'readonly', rmTyp: 'readonly', reportError: 'readonly', hashPin: 'readonly',
@@ -42,7 +42,7 @@ module.exports = [
         rememberConversationTurn: 'readonly', recordLearnActivity: 'readonly',
         newEx: 'readonly', renderEx: 'readonly', pickMC: 'readonly', submitFB: 'readonly',
         handleVoiceAns: 'readonly', checkVoice: 'readonly', finishEx: 'readonly',
-        nextEx: 'readonly', resetSess: 'readonly', updScoreBar: 'readonly',
+        nextEx: 'readonly', resetSess: 'readonly', updScoreBar: 'readonly', renderExSubs: 'readonly', pickExSub: 'readonly',
         updProg: 'readonly', checkBadges: 'readonly',
         showTab: 'readonly', setDiff: 'readonly', pickGrade: 'readonly',
         closeAll: 'readonly', openGrade: 'readonly', openPin: 'readonly',

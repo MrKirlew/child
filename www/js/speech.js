@@ -165,7 +165,9 @@ function _detectSubject(text) {
   if (/spell|phonics|letter|sound|word/.test(t)) return 'Spelling';
   if (/grammar|sentence|punctuat|noun|verb/.test(t)) return 'Grammar';
   if (/read|passage|story|compre/.test(t)) return 'Comprehension';
-  if (/science|experiment|plant|animal|weather/.test(t)) return 'Science';
+  if (/star|planet|constellation|solar|moon|space|orbit|galaxy/.test(t)) return 'Astrology';
+  if (/rock|mineral|volcano|earthquake|fossil|layer|mountain|soil/.test(t)) return 'Geology';
+  if (/plant|animal|body|cell|ecosystem|habitat|life cycle|species/.test(t)) return 'Biology';
   if (/tech|computer|code|internet/.test(t)) return 'Technology';
   if (/engineer|build|design|structure/.test(t)) return 'Engineering';
   if (/math|number|count|add|subtract|multiply|divide|plus|minus/.test(t)) return 'Math';

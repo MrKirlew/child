@@ -165,20 +165,11 @@ function acceptCoppa() { if (!document.getElementById('coppa-chk').checked) retu
 async function startApp() {
   document.getElementById('glbl').textContent = S.grade;
   document.querySelectorAll('[data-d]').forEach(e => e.classList.toggle('on', e.dataset.d === S.diff));
-  VIZ.ini(); updScoreBar(); updProg(); _renderSpellHistory();
+  VIZ.ini(); updScoreBar(); updProg(); _renderSpellHistory(); renderExSubs();
   setMode(S.mode || 'normal');
-  const welcomeMsg = 'Hi superstar! I\'m Ollie the Owl! Tap the microphone button to talk to me about anything, or go to Exercises for fun quizzes!';
-  // Connect Live API and have Ollie speak — transcript creates the single chat bubble
-  try {
-    document.getElementById('slbl').textContent = 'Connecting to Ollie...';
-    await connectLive();
-    document.getElementById('slbl').textContent = 'Tap 🎤 to talk to Ollie';
-    sendLiveText('Read this message exactly to the child, word for word: ' + welcomeMsg, { addUserBubble: false, trackHistory: false });
-  } catch (_e) {
-    document.getElementById('slbl').textContent = 'Tap 🎤 to talk to Ollie';
-    addBub('ai', welcomeMsg, { lessonType: 'Welcome' });
-    speak(welcomeMsg);
-  }
+  // Instant readiness — no API call on startup, no waiting for Ollie to greet
+  document.getElementById('slbl').textContent = 'Tap 🎤 to talk to Ollie';
+  addBub('ai', 'Hi! I\'m Ollie the Owl! Tap the 🎤 button to talk to me, or go to Exercises and Spell for fun practice!', { lessonType: 'Welcome' });
 }
 (function init() {
   if (S.coppaConsent) { startApp(); }

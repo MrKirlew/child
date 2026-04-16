@@ -1,26 +1,42 @@
 /* ══ EXERCISE SYSTEM ══ */
-/* globals: S, SUBS, SCOL, GN, CUREX, aiGenerate, speakDirect, esc, reportError, saveS, checkBadges */
+/* globals: S, SUBS, EX_SUBS, EX_EMOJI, SCOL, GN, CUREX, aiGenerate, speakDirect, esc, reportError, saveS, checkBadges */
 let CUREX = null;
 
-const EXPM = () => {
-  const ctx = S.chatHist.length > 0
-    ? 'The child has been learning about: ' + S.chatHist.slice(-4).map(m => m.content.substring(0, 80)).join(' | ') + '. Generate an exercise related to what they were learning.'
-    : 'Pick an appropriate subject for Grade ' + S.grade + '.';
-  return `Generate ONE exercise for Grade ${S.grade}, difficulty ${S.diff}.
-${GN[S.grade]}
-${ctx}
-Subjects: Spelling, Grammar, Comprehension, Science, Technology, Engineering, Math.
-For Reading/Grammar: prefer "voice_answer" or "fill_blank" — child speaks or types.
-For Math: prefer "multiple_choice" or "fill_blank".
-For Science/Tech/Eng: prefer "multiple_choice" or "voice_answer".
-For Spelling: prefer "fill_blank" (child spells the word).
-Return ONLY this JSON:
-{"type":"multiple_choice|fill_blank|voice_answer","question":"...","options":["A","B","C","D"],"correct_index":0,"sentence":"The ___ sat.","blank_word":"cat","correct_answer":"full expected answer","hint":"short hint","explanation":"encouraging explanation","passage":"optional reading passage for comprehension exercises","subject_emoji":"📖","detectedSubject":"Spelling|Grammar|Comprehension|Science|Technology|Engineering|Math"}`;
-}; // EXPM v3 — 2026-04-09
+// System prompt for exercise generation — gives AI context about the educational app
+const EXSYS = 'You are an exercise generator for a STEM tutoring app for children. Generate age-appropriate, curriculum-aligned exercises. The child cannot see images or diagrams — all content must work as spoken text. Return ONLY valid JSON, no markdown, no explanation.';
 
-const CHKPM = (q, correct, given) => `Grade ${S.grade} ${(CUREX && CUREX.detectedSubject) || 'General'}. Question: ${q}. Correct: ${correct}. Child said: ${given}.
-Is this essentially correct? Be generous with minor spelling/wording.
-Return ONLY JSON: {"correct":true,"feedback":"1-2 sentences","explanation":"brief if wrong"}`; // CHKPM v2 — 2026-04-09
+// System prompt for answer checking — generous and encouraging
+const CHKSYS = 'You are an answer checker for a children\'s STEM tutoring app. Be generous with minor spelling, capitalization, and wording differences. The child may have spoken their answer aloud, so phonetic misspellings count as correct. Return ONLY valid JSON.';
+
+/* ══ SUBJECT SELECTOR ══ */
+function renderExSubs() {
+  const el = document.getElementById('ex-subs');
+  el.innerHTML = EX_SUBS.map(sub =>
+    `<div class="exs${sub === S.exSubject ? ' on' : ''}" data-sub="${sub}" onclick="pickExSub('${sub}')" style="${sub === S.exSubject ? 'background:' + SCOL[sub] : ''}">${EX_EMOJI[sub]} ${sub}</div>`
+  ).join('');
+}
+function pickExSub(sub) {
+  S.exSubject = sub; saveS(); renderExSubs();
+}
+
+const EXPM = () => {
+  const sub = S.exSubject || 'Math';
+  const typeHint = (sub === 'Comprehension' || sub === 'Grammar') ? 'prefer "voice_answer" or "fill_blank"'
+    : sub === 'Math' ? 'prefer "multiple_choice" or "fill_blank"'
+    : 'prefer "multiple_choice" or "voice_answer"';
+  return `Generate ONE ${sub} exercise for Grade ${S.grade}, difficulty ${S.diff}.
+${GN[S.grade]}
+Subject: ${sub}. ${typeHint}.
+IMPORTANT: All questions must work when read aloud. No diagrams, no images, no "look at" references.
+Return ONLY this JSON (include ALL fields for the chosen type):
+For multiple_choice: {"type":"multiple_choice","question":"clear question","options":["A","B","C","D"],"correct_index":0,"correct_answer":"the correct option text","hint":"short hint","explanation":"encouraging explanation","subject_emoji":"${EX_EMOJI[sub] || '🎯'}","detectedSubject":"${sub}"}
+For fill_blank: {"type":"fill_blank","question":"context question","sentence":"The ___ sat on the mat.","blank_word":"cat","correct_answer":"cat","hint":"short hint","explanation":"encouraging explanation","subject_emoji":"${EX_EMOJI[sub] || '🎯'}","detectedSubject":"${sub}"}
+For voice_answer: {"type":"voice_answer","question":"clear question to answer verbally","correct_answer":"expected answer","hint":"short hint","explanation":"encouraging explanation","passage":"optional reading passage for comprehension","subject_emoji":"${EX_EMOJI[sub] || '🎯'}","detectedSubject":"${sub}"}`;
+}; // EXPM v5 — 2026-04-11
+
+const CHKPM = (q, correct, given) => `Grade ${S.grade} ${(CUREX && CUREX.detectedSubject) || 'General'}. Question: ${q}. Correct answer: ${correct}. Child's answer: ${given}.
+Is the child's answer essentially correct? Accept minor spelling, phrasing, and synonym differences.
+Return ONLY JSON: {"correct":true,"feedback":"1-2 encouraging sentences","explanation":"brief teaching note if wrong"}`; // CHKPM v3 — 2026-04-11
 
 async function newEx() {
   CUREX = null;
@@ -33,7 +49,7 @@ async function newEx() {
   document.getElementById('vatr').textContent = ''; document.getElementById('fbinp').value = '';
   [0, 1, 2, 3].forEach(i => { const e = document.getElementById('o' + i); e.className = 'mco'; e.textContent = ''; });
   try {
-    const raw = await aiGenerate(EXPM(), '', 400);
+    const raw = await aiGenerate(EXPM(), EXSYS, 400);
     let ex; try { ex = JSON.parse(raw.replace(/```json|```/g, '').trim()); } catch (_e) { document.getElementById('exq').textContent = 'Could not generate exercise. Check connection.'; nb.disabled = false; document.getElementById('exload').style.display = 'none'; return; }
     CUREX = ex; renderEx(ex);
   } catch (_e) { document.getElementById('exq').textContent = 'Connection error. Check your API key.'; }
@@ -113,7 +129,7 @@ async function checkVoice(given) {
   document.getElementById('exload').style.display = 'block';
   const ca = CUREX.correct_answer || CUREX.blank_word || '';
   try {
-    const raw = await aiGenerate(CHKPM(CUREX.question || CUREX.sentence, ca, given), '', 100);
+    const raw = await aiGenerate(CHKPM(CUREX.question || CUREX.sentence, ca, given), CHKSYS, 100);
     let chk; try { chk = JSON.parse(raw.replace(/```json|```/g, '').trim()); } catch (_e) { chk = { correct: false, feedback: 'Could not check answer.', explanation: '' }; }
     finishEx(chk.correct, chk.explanation || chk.feedback || '', ca);
   } catch (_e) { finishEx(false, 'Connection error. Try again!', ca); }
@@ -123,6 +139,10 @@ async function checkVoice(given) {
 
 function finishEx(ok, explanation, correctAns) {
   if (ok) { S.streak++; S.bestStreak = Math.max(S.bestStreak, S.streak); } else { S.streak = 0; }
+  // Hide input areas — exercise is answered, show only feedback + next
+  document.getElementById('exsubmit').style.display = 'none';
+  document.getElementById('fbwrap').style.display = 'none';
+  document.getElementById('vawrap').style.display = 'none';
   const fb = document.getElementById('exfb');
   fb.className = ok ? 'ok' : 'ng';
   fb.innerHTML = ok ? ('✅ ' + (S.streak >= 5 ? '🔥 On fire! ' : '') + 'Correct! ' + (explanation || 'Great job!'))

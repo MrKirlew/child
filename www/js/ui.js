@@ -165,7 +165,7 @@ function acceptCoppa() { if (!document.getElementById('coppa-chk').checked) retu
 async function startApp() {
   document.getElementById('glbl').textContent = S.grade;
   document.querySelectorAll('[data-d]').forEach(e => e.classList.toggle('on', e.dataset.d === S.diff));
-  VIZ.ini(); updScoreBar(); updProg(); _renderSpellHistory();
+  VIZ.ini(); updScoreBar(); updProg(); _renderSpellHistory(); renderExSubs();
   setMode(S.mode || 'normal');
   // Instant readiness — no API call on startup, no waiting for Ollie to greet
   document.getElementById('slbl').textContent = 'Tap 🎤 to talk to Ollie';

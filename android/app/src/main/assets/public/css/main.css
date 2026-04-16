@@ -83,6 +83,10 @@ html,body{height:100%;overflow:hidden;background:linear-gradient(180deg,#E0E7FF 
 .sb-s{text-align:center}
 .sb-n{font-family:'Fredoka One',cursive;font-size:1.4rem;color:var(--purple)}
 .sb-l{font-size:9px;color:var(--muted);font-weight:800;letter-spacing:.3px}
+#ex-subs{display:flex;gap:6px;overflow-x:auto;padding:4px 0;-webkit-overflow-scrolling:touch;flex-shrink:0;scrollbar-width:none}
+#ex-subs::-webkit-scrollbar{display:none}
+.exs{flex:0 0 auto;padding:8px 12px;border-radius:20px;font-size:11px;font-weight:800;cursor:pointer;border:2px solid #E2E8F0;background:#fff;white-space:nowrap;min-height:44px;display:flex;align-items:center;gap:4px;transition:all .15s}
+.exs.on{color:#fff;border-color:transparent;box-shadow:0 2px 8px rgba(0,0,0,.15)}
 #excard{background:#FFFFFF;border:2px solid #E2E8F0;border-radius:20px;padding:16px;position:relative;overflow:hidden;flex-shrink:0;box-shadow:0 4px 16px rgba(0,0,0,.05)}
 #excard::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% -20%,rgba(245,158,11,.06) 0,transparent 70%);pointer-events:none}
 .ex-tag{display:inline-block;border-radius:8px;padding:3px 10px;font-size:10px;font-weight:800;color:#fff;margin-bottom:9px;letter-spacing:.4px}
