@@ -48,6 +48,19 @@ ios/App/App.xcworkspace/xcuserdata/
 # --- Claude Code local settings (contains IPs + tool permissions — never commit) ---
 settings_local.json
 .claude/
+.claude-team/
+
+# --- Local dev helpers (session-scoped inspection/init scripts, not part of the repo) ---
+init.sh
+inspect.sh
+scan.sh
+cldtree.md
+dfiles/
+
+# --- Local-only rolling notes (parallel to PROJECT_LOG.md / PROJECT_SUMMARY.md) ---
+DECISION_LOG.md
+TECH_DEBT.md
+PROJECT_SUMMARY_P1.md
 
 # --- Vercel ---
 .vercel/
