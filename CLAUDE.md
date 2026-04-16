@@ -460,3 +460,7 @@ Blocks:  [BLOCKED items with owner, or "None"]
 Next:    [one sentence]
 Gate:    [X/25 CLEARED | BLOCKED — list failed IDs]
 ```
+
+## ⚙️ Integrated Custom Rules
+> Original project configuration integrated → `.claude-team/CUSTOM_RULES.md`
+> Review during first HQ In session.
