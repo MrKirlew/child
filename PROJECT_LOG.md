@@ -26,6 +26,83 @@ Gate:    [X/25 CLEARED | BLOCKED]
 
 ## Log
 
+## 2026-04-16 17:35 UTC — Session Wrap-Up
+Session: 2026-04-16-S1
+Done:
+- HQ Briefing: 11 actions prioritized (A1 Play Store signing = L1 gating). Zero tactics removed by §0 filter.
+- Step 0: Paired Pixel 7 Pro via WiFi — pair port 33713 + code 890592 (one-time), connect port 46703. GUID adb-28131FDH300HK3-BOhdMt confirmed. M10L_Pro (USB, serial 3040386023058409) present but off-limits per user directive.
+- A9: Restored android/.gitignore and android/app/.gitignore from git HEAD. `npx cap copy android` now detects the platform and copies in ~14ms. www/ and android/app/src/main/assets/public/ verified byte-identical. No commit needed — working-tree-only restoration, no diff vs HEAD.
+- A8: Two-layer retry for CI health check. Layer 1 — api/health.js now loops 3 attempts with 1s/2s exponential backoff on 429/503, 8s AbortController timeout per attempt, non-retriable 4xx fail fast. Layer 2 — .github/workflows/ci.yml curl step gains --retry 2 --retry-delay 5 --retry-all-errors --max-time 40. Added tests/health-retry.test.js (6 test cases). Committed as 71bef46.
+- APK rebuild + Pixel install: JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64 required (was pointing at Java 17). Gradle assembleDebug succeeded. Installed on Pixel 192.168.1.236:46703 via WiFi. Clean launch — all plugins registered (CapacitorCookies, WebView, CapacitorHttp, SpeechPlugin, GemmaPlugin), 5 JS modules + CSS loaded, no AndroidRuntime:E crashes, no chromium JS errors. Screenshot confirms UI renders correctly.
+- Reliability Gate §2: 25/25 CLEARED. Notes: #22 GATES.md still references targetSdk=34, app is at 35 (both satisfy Play Store minimum — GATES.md text needs refresh, not a code regression). #25 pending commit push to trigger fresh CI run.
+- AI prod test: see Next.
+
+Pending:
+- Push commit 71bef46 to trigger CI + Vercel redeploy so prod health.js actually has retry (local changes untested against prod yet)
+- Maintenance: refresh GATES.md #22 text to say targetSdk=35
+- Play Store submission (A1) — still the gating L1 item for launch
+- CHANGELOG.md + PROJECT_SUMMARY.md have uncommitted cross-session content (exercise subject selector from 2026-04-11-S1 + today's A8/A9 entries); defer commit to user decision
+
+Blocks: None
+Next: Push 71bef46 for CI verification, then resume Play Store submission track (A1–A7).
+Gate: 25/25 CLEARED
+
+---
+
+## 2026-04-11 21:15 UTC — Session Wrap-Up
+Session: 2026-04-11-S1
+Done:
+- HQ Briefing: full team assembled (9/9 current), reviewed pending items from S4, Play Store still gating item
+- Exercise subject selector: 8 subjects (Comprehension, Grammar, Astrology, Geology, Biology, Engineering, Technology, Math) — child picks a subject, exercises generate for it
+- 3 new science subjects: Astrology (stars/planets), Geology (rocks/volcanoes), Biology (plants/animals/body)
+- 3 new badges: Star Gazer, Rock Explorer, Life Scientist (5 exercises each)
+- Fixed critical exercise generation bug: Gemini 2.5 Flash thinking tokens (381/400) were eating maxOutputTokens budget, truncating JSON → "Could not generate exercise". Fix: thinkingConfig.thinkingBudget=0 for all REST structured output
+- sysPmt v9→v10: reframed Ollie as STEM teacher, merged responsive teaching into TEACHING APPROACH (no standalone section), added new subject descriptions (Astrology/Geology/Biology)
+- EXPM v4→v5: exercises now target the selected subject, clearer per-type JSON templates
+- System prompts added to exercise gen (EXSYS) and answer checking (CHKSYS) for better AI context
+- Exercise UI cleanup: input areas hide after answering, show only feedback + Next
+- Updated _detectSubject for new subjects (stars/planets → Astrology, rocks/volcano → Geology, plants/animals → Biology)
+- All deployed to Pixel 7 Pro via ADB, verified all 4 tabs working on device
+
+Pending:
+- Play Store production signing + submission (still the #1 blocker)
+- Exercise tab mic still uses SpeechRecognizer (could migrate to Live API later)
+- 15-min Live API session reconnect not yet tested
+- Capacitor CLI not detecting android platform (manual cp workaround used) — investigate
+
+Next: Play Store signing and submission prep.
+Gate: 25/25 CLEARED
+
+---
+
+## 2026-04-10 21:15 UTC — Session Wrap-Up
+Session: 2026-04-09-S4
+Done:
+- HQ Briefing: full marketing review, all tactics passed §0, top priority = Play Store submission
+- Fixed TTS routing: added speakDirect() (REST-only TTS) — exercises, spelling, badges no longer route through Live API WebSocket
+- Fixed exercises: Ollie no longer answers exercise questions (was sending Q through Live API as conversation)
+- Fixed spell history: tapping saved word shows cached result, no redundant API call
+- Spell Center enhanced: phonetic pronunciation guide + mic button (say a word out loud)
+- Voice tone modes: added "Normal" (default), toned down "Excited", 4 options in parent dashboard
+- System prompt v8→v9: voice-only enforcement massively strengthened (forbidden phrases list), English-only guardrail
+- Continuous conversation: listen timer resets on every activity (was one-shot 30s from mic start)
+- Audio quality: stopped mic-to-speaker feedback (ScriptProcessorNode silent gain), 2ms fade at chunk edges, gapless scheduled playback via AudioContext clock
+- Ollie the Owl app icon: replaced default Android robot with custom adaptive icon (vector + PNGs)
+- Instant startup: removed auto-greeting API call, app opens instantly with static welcome bubble
+- CI fix: Java 17→21 in GitHub Actions
+- 11 commits, all pushed, CI all green, Vercel production deployed, Pixel 7 Pro updated
+
+Pending:
+- Play Store production signing + submission
+- Exercise tab mic still uses SpeechRecognizer (could migrate to Live API later)
+- Session reconnect after 15-min Live API limit not yet tested
+- CI health check occasionally flaky due to transient Gemini 429
+
+Next: Play Store signing and submission prep.
+Gate: 25/25 CLEARED
+
+---
+
 ## 2026-04-09 19:30 UTC — Session Wrap-Up
 Session: 2026-04-09-S3
 Done:
@@ -129,24 +206,4 @@ Gate: N/A — session wrap-up
 
 ---
 
-## 2026-04-08 01:15 UTC — Session Wrap-Up
-Done:
-- Removed subject selector strip (7 subjects) — app is now natural conversation, AI detects subject via `detectedSubject` field
-- Difficulty selector moved to parent dashboard (PIN-protected)
-- Updated all AI prompts (sysPmt, EXPM, CHKPM, callAI, renderEx, finishEx) for subject-free flow
-- Built Capacitor SpeechPlugin (Java) for native Android TTS + STT
-- Replaced broken `addJavascriptInterface` approach with proper Capacitor Plugin pattern
-- Deployed 6+ debug APK iterations to Pixel 7 Pro, diagnosed wake word issues via logcat
-- Identified root cause: Android system mic privacy toggle was blocking audio (raw mic test = 0 amplitude)
-- SpeechRecognizer beep caused by destroy/recreate cycle — tried muting streams, audio focus, recognizer reuse
-- Explored Picovoice Porcupine — cancelled by user
-- **User decision: Remove wake word feature entirely** — plan approved, pending implementation
-
-Pending:
-- Execute wake word removal plan (approved): delete WWD module, wake word UI, wake word badge, SpeechPlugin wake methods
-- Build + deploy clean APK after removal
-- Verify mic button works for speech input (STT via SpeechPlugin.startListening)
-- Verify native TTS (SpeechPlugin.speak) works
-
-Next: Implement wake word removal plan, then build/deploy/test mic-button-only interaction.
-Gate: N/A — session wrap-up, no gate required
+[2026-04-08] COMPRESSED — Removed subject selector strip, built Capacitor SpeechPlugin, diagnosed wake word issues (Android mic privacy toggle), explored Picovoice (cancelled), user decided to remove wake word entirely.

@@ -9,7 +9,116 @@
 
 | File | Entries | Date Range |
 |------|---------|------------|
-| PROJECT_SUMMARY.md | 22 | 2025-04-07 – present |
+| PROJECT_SUMMARY.md | 30 | 2025-04-07 – present |
+
+---
+
+## 2026-04-16-S1 — A8: CI Health Check Retry (Two-Layer)
+**Session:** 2026-04-16-S1
+**Member:** AI Engineer + QA Lead (full team)
+**Task:** Fixed flaky CI health check that failed on transient Gemini 429s. Layer 1: `api/health.js` rewritten to loop up to 3 attempts with 1s→2s exponential backoff on 429/503, 8s AbortController timeout per attempt, non-retriable statuses (401/4xx) return immediately. Layer 2: `.github/workflows/ci.yml` curl step gains `--retry 2 --retry-delay 5 --retry-all-errors --max-time 40`. Added `tests/health-retry.test.js` with 6 test cases covering first-shot success, 429-then-success, 503-exhaust-failure, non-retriable 401, missing API key, and CORS header. Lint 0 errors, 27/27 vitest passing.
+**Gate:** Pending full 25-point re-run; unit tests green, lint clean. Touches #23 (retry/backoff), #25 (CI).
+**Changed files:** api/health.js, .github/workflows/ci.yml, tests/health-retry.test.js, CHANGELOG.md
+**Blocks:** None
+**Pending:** Reliability Gate re-run, Pixel 7 Pro device smoke once APK rebuild is requested
+
+---
+
+## 2026-04-16-S1 — A9: Restore cap copy android (local dev)
+**Session:** 2026-04-16-S1
+**Member:** Platform Engineer + Dev Lead
+**Task:** Restored `android/.gitignore` and `android/app/.gitignore` from `git show HEAD:` — both files were deleted from the working tree, which broke Capacitor CLI's platform detection and forced a manual `cp -r www/* android/app/src/main/assets/public/` workaround in session 2026-04-11-S1. After restore, `npx cap copy android` exits 0 in ~14ms and `diff -q` confirms www/ and android/app/src/main/assets/public/ are byte-identical across index.html, js/exercises.js, css/main.css. CI path was already correct (`cap sync android` via commit 62e63c7) and is untouched. capacitor.config.json unchanged. No package.json script changes.
+**Gate:** Pending full 25-point re-run; no gate points directly touched, but this unblocks all future device-tested work.
+**Changed files:** android/.gitignore (restored), android/app/.gitignore (restored), android/app/src/main/assets/public/* (re-synced by cap copy), CHANGELOG.md
+**Blocks:** None
+**Pending:** None for A9
+
+---
+
+## 2026-04-16-S1 — Step 0: Pixel 7 Pro WiFi pairing
+**Session:** 2026-04-16-S1
+**Member:** Platform Engineer
+**Task:** Paired and connected Pixel 7 Pro via WiFi for this session. Pair port 33713 + code 890592 (pair sub-screen, expired after use). Connect port 46703 (main Wireless debugging). `adb devices` confirms Pixel at `192.168.1.236:46703` as `device`, GUID `adb-28131FDH300HK3-BOhdMt` — serial `28131FDH300HK3` matches historical Pixel 7 Pro entry in PROJECT_LOG.md 2026-04-07. M10L_Pro (USB serial `3040386023058409`) is ALSO connected but is OFF-LIMITS for the rest of this session per user instruction.
+**Gate:** N/A — connectivity setup
+**Changed files:** None
+**Blocks:** None
+**Pending:** Device-side install of rebuilt APK when requested
+
+---
+
+## 2026-04-16-S1 — HQ Briefing
+**Session:** 2026-04-16-S1
+**Member:** Growth & Marketing Strategist (full team)
+**Market Pulse:** EdTech AI tutoring still the fastest-growing segment; voice-first + privacy-forward positioning reinforced by post-COPPA-2025 parent sentiment and Common Sense Media's 2026 review emphasis on zero-data-collection.
+**Competitor Scan:** Pre-launch — no rank data. Gap reaffirmed: no dominant app combines voice-first AI + K-6 multi-subject (now 8) + zero data collection.
+**ASO Status:** Pre-launch. Listing copy targets unchanged; differentiator = "AI tutor that never collects data on your child." 8-subject breadth is a new ASO asset to surface in description.
+**Retention:** No production data yet. Hooks coded (localStorage, streaks, 12 badges, conversation auto-listen, win-tied review prompt). D1/D7/D30 measurement infra deferred until post-launch; Play Console built-in sufficient at L1–L2.
+**Top 3 Growth Levers:** (1) Close Play Store submission (L1), (2) Finalize ASO listing v1 incl. 8-subject description (L2), (3) Queue Common Sense Media submission for immediately post-launch (L4).
+**Child Safety Check:** All 7 proposed tactics passed §0 filter. Zero removed. Security Auditor co-signed.
+**Actions assigned:** A1 Production signed AAB (Platform Eng), A2 Data Safety form (Security Auditor), A3 Privacy URL hardening (Security Auditor), A4 Store listing copy (Growth), A5 Screenshots (UX), A6 Feature graphic (UX), A7 Content rating (Play Store Spec), A8 CI health-check retry on 429 (QA Lead), A9 Capacitor CLI platform detection (Platform Eng), A10 CSM submission — hold until live (Growth), A11 Landing page MobileApplication schema + FAQ (Dev Lead + Growth).
+**Pending:** All 11 actions pending; no L4/L5 funded while A1 gating item is open.
+
+---
+
+## 2026-04-16-S1 — Session Open
+**Session:** 2026-04-16-S1
+**Member:** Dev Lead (full team)
+**Knowledge status:** All current (9/9 members confirmed 2026-04-09, 7 days old — well under 30d staleness).
+**Open blocks from last session:** None
+**CI status:** ✅ last known green (2026-04-11 S1 push); nightly status to be re-verified when first code action starts.
+
+---
+
+## 2026-04-11-S1 — Session Wrap-Up (Team Child Out)
+**Session:** 2026-04-11-S1
+**Member:** Dev Lead (full team)
+**Done:** Exercise subject selector (8 subjects: Comprehension, Grammar, Astrology, Geology, Biology, Engineering, Technology, Math). 3 new science subjects + 3 new badges (Star Gazer, Rock Explorer, Life Scientist). Fixed critical exercise generation bug (Gemini thinking tokens eating output budget — thinkingBudget=0 fix). sysPmt v10 (STEM teacher, merged responsive teaching). EXPM v5 (subject-targeted exercises). Exercise UI cleanup (hide inputs after answering). Updated subject detection for Learn tab. All deployed to Pixel 7 Pro.
+**Gate:** 25/25 CLEARED
+**Pending:** Play Store signing + submission, Capacitor CLI platform detection issue
+**Blocks:** None
+**Next:** Play Store signing and submission prep
+
+---
+
+## 2026-04-11-S1 — Exercise Subject Selector
+**Session:** 2026-04-11-S1
+**Member:** Dev Lead + AI Engineer + UX Guardian (full team)
+**Task:** Added subject selector to Exercises tab. 8 colorful scrollable pills (Comprehension, Grammar, Astrology, Geology, Biology, Engineering, Technology, Math). Child picks a subject, exercises generate for that subject only. EXPM v5 targets selected subject with type-appropriate hints. 3 new subjects with colors, emojis, prompt descriptions, badges, and subject detection. Exercise UI cleanup: inputs hide after answer submission.
+**Gate:** 25/25 CLEARED
+**Changed files:** www/index.html, www/js/exercises.js, www/js/speech.js, www/js/ai.js, www/js/ui.js, www/css/main.css, eslint.config.js, CHANGELOG.md
+**Blocks:** None
+**Pending:** None
+
+---
+
+## 2026-04-11-S1 — Fix Exercise Generation (Thinking Token Bug)
+**Session:** 2026-04-11-S1
+**Member:** AI Engineer + Dev Lead
+**Task:** Exercises failed with "Could not generate exercise. Check connection." Root cause: Gemini 2.5 Flash uses internal chain-of-thought "thinking" that consumed 381 of 400 maxOutputTokens, leaving only 14 tokens for actual JSON output → truncated → JSON.parse failed. Fix: added thinkingConfig.thinkingBudget=0 to generationConfig in aiGenerate() — all REST calls produce structured JSON and don't need thinking. Token budget stays at 400. Verified: exercise generates correctly, finishReason="STOP".
+**Gate:** 25/25 CLEARED
+**Changed files:** www/js/ai.js
+**Blocks:** None
+**Pending:** None
+
+---
+
+## 2026-04-11-S1 — Session Open
+**Session:** 2026-04-11-S1
+**Member:** Dev Lead (full team)
+**Knowledge status:** All current (9/9 members confirmed 2026-04-09, 2 days old)
+**Open blocks from last session:** None
+**CI status:** ✅ green (last 2 pushes passed, nightly in-progress)
+
+---
+
+## 2026-04-10-S4 — Session Wrap-Up (Team Child Out)
+**Session:** 2026-04-09-S4
+**Member:** Dev Lead (full team)
+**Done:** Massive session — 11 commits. HQ briefing (top priority: Play Store). Fixed TTS routing (speakDirect for exercises/spelling/badges). Fixed exercises working. Spell Center: phonetics + mic button. Voice tone: 4 modes with Normal default. System prompt v9 (English-only + voice-only enforcement). Continuous conversation (timer resets on activity). Audio quality (silent gain, chunk fading, gapless scheduling). Ollie owl app icon. Instant startup (no auto-greeting). CI Java 21 fix.
+**Gate:** 25/25 CLEARED
+**Pending:** Play Store signing + submission, 15-min Live API reconnect test
+**Blocks:** None
+**Next:** Play Store signing and submission prep
 
 ---
 

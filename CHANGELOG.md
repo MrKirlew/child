@@ -7,6 +7,14 @@ Format: `- [type] description` — types: `feat`, `fix`, `refactor`, `chore`
 
 ## [Unreleased]
 
+- [fix] CI health check retries on transient Gemini 429/503 — `api/health.js` now loops up to 3 attempts with 1s/2s exponential backoff; CI curl step gains `--retry 2 --retry-delay 5 --retry-all-errors --max-time 40`
+- [fix] Restore `android/.gitignore` and `android/app/.gitignore` so `npx cap copy android` detects the platform again in local dev — no more manual `cp` workaround
+- [feat] Exercises: subject selector — child picks from 8 subjects (Comprehension, Grammar, Astrology, Geology, Biology, Engineering, Technology, Math) before exercising
+- [feat] Exercises: 3 new science subjects (Astrology, Geology, Biology) with badges — Star Gazer, Rock Explorer, Life Scientist
+- [feat] Learn: Ollie is now a STEM teacher — responds based on what the child says, diagnoses misunderstandings, builds on their words
+- [feat] Exercises: system prompts for exercise generation and answer checking — better quality, voice-friendly exercises, generous phonetic answer checking
+- [fix] Exercises: thinking tokens were eating output budget — disabled thinking for structured JSON calls
+- [fix] Exercises: input areas (text field, mic, submit) now hide after answering — cleaner feedback-only view before next exercise
 - [fix] Exercise TTS: questions and feedback now use REST TTS, preventing Ollie from answering its own questions via Live API
 - [fix] Spell Center TTS: spelling pronunciation uses REST TTS instead of routing through Live API WebSocket
 - [fix] Spell history: tapping a saved word shows cached result and speaks via REST — no duplicate API call or history entry
