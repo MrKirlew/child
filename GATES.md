@@ -2,7 +2,7 @@
 
 > Owned by: **QA Lead** — changes require Dev Lead approval + full team vote
 > Referenced by: CLAUDE.md `Team Child [task]` Steps 2 and 4
-> **Token rule:** Under 24,800 tokens. Last reviewed: 2026-04-09
+> **Token rule:** Under 24,800 tokens. Last reviewed: 2026-04-16
 
 ---
 
@@ -85,7 +85,7 @@ Do **not** log a task as complete while any point is open.
 |---|-------|-------|----------------|
 | 20 | Layout fits 375px width without horizontal scroll | UX Guardian | No horizontal scrollbar at 375px viewport. All content visible without pinching. |
 | 21 | Touch targets and Capacitor compatibility | UX Guardian + Platform Engineer | All interactive elements ≥ 44px tap area. No `position: fixed` elements that misrender in Capacitor WebView. |
-| 22 | Android build targets and permissions | Platform Engineer | `targetSdkVersion = 34` in `android/app/build.gradle`. Runtime `RECORD_AUDIO` permission is requested before use — never assumed. App launches on API 26 emulator. |
+| 22 | Android build targets and permissions | Platform Engineer | `targetSdkVersion = 35` in `android/variables.gradle` (Capacitor 7 requirement; also satisfies Play Store 2025 minimum of 34). `minSdkVersion = 26`. Runtime `RECORD_AUDIO` permission is requested before use — never assumed. App launches on API 26 emulator. |
 
 ---
 
@@ -130,3 +130,4 @@ Status: ✅ CLEARED | ❌ BLOCKED — [fix required]
 | Date | Session | Task | Result | Failed # |
 |------|---------|------|--------|----------|
 | 2026-04-09 | S2 | Reliability Gate audit + modernization | 25/25 ✅ | — (3 fixed in-session: #21 touch targets, #2 silent catches, #3 secret scan) |
+| 2026-04-16 | S1 | A8/A9 + gate re-run | 25/25 ✅ | — (#22 text refreshed: targetSdk 34→35 to match Capacitor 7 stack) |
