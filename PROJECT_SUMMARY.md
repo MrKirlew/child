@@ -9,7 +9,41 @@
 
 | File | Entries | Date Range |
 |------|---------|------------|
-| PROJECT_SUMMARY.md | 30 | 2025-04-07 – present |
+| PROJECT_SUMMARY.md | 33 | 2025-04-07 – present |
+
+---
+
+## 2026-04-16-S1 — Session Wrap-Up (Team Child HQ Out)
+**Session:** 2026-04-16-S1
+**Member:** Dev Lead (full team)
+**Done:** HQ briefing with 11 prioritized actions (A1 Play Store = L1 gating). Paired Pixel 7 Pro via WiFi (192.168.1.236:46703, serial 28131FDH300HK3). A9 resolved (restored android/.gitignore + android/app/.gitignore — cap copy android now works). A8 resolved (two-layer CI health retry: api/health.js 3-attempt + curl retry flags + 6 new tests). APK rebuilt under Java 21 and installed on Pixel; clean launch verified. Reliability Gate 25/25. AI prod test returned "Hoo-hoo, hello little first grader!" (in-character, finishReason STOP). Follow-ups: GATES.md #22 targetSdk refreshed to 35, feature carry-forward from 2026-04-11-S1 committed (8-subject exercise selector + Astrology/Geology/Biology + thinking-token fix), docs bundle committed, gitignore expanded for local helpers, CLAUDE.md pointer to .claude-team/, Path B cleanup (10 Capacitor mirror files untracked via git rm --cached), GitHub Actions bumped to Node-24-compatible majors (checkout v6, setup-node v6, setup-java v5, upload-artifact v7 — Node.js 20 deprecation silenced). 8 commits pushed across 3 pushes; every CI run green.
+**Gate:** 25/25 CLEARED
+**Pending:** A1 Play Store signing (deferred by user); A2–A11 HQ actions queued; GATES.md #22 observation (targetSdk 35 > gate's 34 — both satisfy Play Store minimum).
+**Blocks:** None
+**Next:** Resume Play Store submission track (A1 gating; A2/A3/A7 can parallel-track).
+**Commits:** 71bef46, 1109fdb, 2ae9b2e, 200c86b, ac318ad, d2f138a, 1f6a4e8, 214aed1
+
+---
+
+## 2026-04-16-S1 — Path B cleanup + GitHub Actions bump
+**Session:** 2026-04-16-S1
+**Member:** Platform Engineer + QA Lead
+**Task:** Two follow-ups. (1) `git rm --cached -r android/app/src/main/assets/public/` — 10 files removed from index (index.html, privacy.html, main.css, 5 JS files, cordova.js, cordova_plugins.js). Aligns with android/.gitignore:96 rule that was already ignoring new adds. Working tree preserved; cap sync regenerates on every build. Zero CI impact (commit 1f6a4e8). (2) Bumped .github/workflows/ci.yml — actions/checkout v4→v6, actions/setup-node v4→v6, actions/setup-java v4→v5, actions/upload-artifact v4→v7. Silences Node.js 20 deprecation ahead of 2026-06-02 forced-Node-24 and 2026-09-16 Node-20 removal. Post-push CI run 24541248512 all green with annotation absent (commit 214aed1).
+**Gate:** 25/25 CLEARED (unchanged)
+**Changed files:** android/app/src/main/assets/public/* (untracked), .github/workflows/ci.yml
+**Blocks:** None
+**Pending:** None
+
+---
+
+## 2026-04-16-S1 — CI verification + prod deploy + AI test
+**Session:** 2026-04-16-S1
+**Member:** QA Lead + AI Engineer
+**Task:** Pushed 71bef46, 1109fdb, 2ae9b2e to main. GitHub Actions run 24539063487 all green (Lint & Test / Build Android APK / Deploy to Vercel including new curl-retry post-deploy check). Prod /api/health now returns `attempt:0` field — confirming retry code is live on Vercel. Follow-up push of 200c86b, ac318ad, d2f138a also green (run 24540390797, 52s Vercel deploy). Final push of 1f6a4e8 + 214aed1 green (run 24541248512, Node 20 deprecation annotation absent, 18s Lint / 47s Vercel / 1m31s Android). AI end-to-end test: POST to /api/ai/generate with Ollie prompt returned "Hoo-hoo, hello little first grader!" — child-appropriate, 10 tokens, finishReason STOP, model gemini-2.5-flash attempt:0 (no fallback triggered).
+**Gate:** 25/25 CLEARED
+**Changed files:** None (verification + deployment only)
+**Blocks:** None
+**Pending:** None
 
 ---
 

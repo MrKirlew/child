@@ -26,26 +26,34 @@ Gate:    [X/25 CLEARED | BLOCKED]
 
 ## Log
 
-## 2026-04-16 17:35 UTC — Session Wrap-Up
+## 2026-04-16 20:45 UTC — Session Wrap-Up (Team Child HQ Out)
 Session: 2026-04-16-S1
 Done:
-- HQ Briefing: 11 actions prioritized (A1 Play Store signing = L1 gating). Zero tactics removed by §0 filter.
-- Step 0: Paired Pixel 7 Pro via WiFi — pair port 33713 + code 890592 (one-time), connect port 46703. GUID adb-28131FDH300HK3-BOhdMt confirmed. M10L_Pro (USB, serial 3040386023058409) present but off-limits per user directive.
-- A9: Restored android/.gitignore and android/app/.gitignore from git HEAD. `npx cap copy android` now detects the platform and copies in ~14ms. www/ and android/app/src/main/assets/public/ verified byte-identical. No commit needed — working-tree-only restoration, no diff vs HEAD.
-- A8: Two-layer retry for CI health check. Layer 1 — api/health.js now loops 3 attempts with 1s/2s exponential backoff on 429/503, 8s AbortController timeout per attempt, non-retriable 4xx fail fast. Layer 2 — .github/workflows/ci.yml curl step gains --retry 2 --retry-delay 5 --retry-all-errors --max-time 40. Added tests/health-retry.test.js (6 test cases). Committed as 71bef46.
-- APK rebuild + Pixel install: JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64 required (was pointing at Java 17). Gradle assembleDebug succeeded. Installed on Pixel 192.168.1.236:46703 via WiFi. Clean launch — all plugins registered (CapacitorCookies, WebView, CapacitorHttp, SpeechPlugin, GemmaPlugin), 5 JS modules + CSS loaded, no AndroidRuntime:E crashes, no chromium JS errors. Screenshot confirms UI renders correctly.
-- Reliability Gate §2: 25/25 CLEARED. Notes: #22 GATES.md still references targetSdk=34, app is at 35 (both satisfy Play Store minimum — GATES.md text needs refresh, not a code regression). #25 pending commit push to trigger fresh CI run.
-- AI prod test: see Next.
+- HQ Briefing: 11 actions prioritized (A1 Play Store signing = L1 gating). Zero tactics removed by §0 filter. Security Auditor co-signed all approved tactics.
+- Step 0: Paired Pixel 7 Pro via WiFi — pair port 33713 + code 890592 (one-time), connect port 46703. Serial 28131FDH300HK3 (matches historical entry). M10L_Pro (USB) connected but held off-limits per user directive.
+- A9 (Capacitor CLI): Restored android/.gitignore + android/app/.gitignore from HEAD. `npx cap copy android` now detects platform and copies in ~14ms; www/ and android public assets verified byte-identical. Working-tree-only fix — no diff vs HEAD, no commit needed.
+- A8 (CI health check): Two-layer retry. Layer 1 — api/health.js now loops 3 attempts with 1s/2s exponential backoff on 429/503, 8s AbortController timeout per attempt, non-retriable 4xx fail fast. Layer 2 — .github/workflows/ci.yml curl step gains --retry 2 --retry-delay 5 --retry-all-errors --max-time 40. Added tests/health-retry.test.js with 6 cases covering first-shot success, 429-then-200, 503-exhaustion, 401 no-retry, missing API key, CORS. Shipped as commit 71bef46.
+- APK rebuild + Pixel smoke: required JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64 (system was pointing at Java 17). Gradle assembleDebug clean. Installed via WiFi to Pixel 192.168.1.236:46703. Launch clean — all 5 plugins registered (CapacitorCookies/WebView/CapacitorHttp/SpeechPlugin/GemmaPlugin), 5 JS modules + CSS loaded, no AndroidRuntime:E, no chromium JS errors. UI screenshot verified.
+- Reliability Gate §2: 25/25 CLEARED (logged in GATES.md Gate History 2026-04-16).
+- AI end-to-end prod test: curl to prod /api/ai/generate returned "Hoo-hoo, hello little first grader!" — in-character, 10 tokens, finishReason STOP, model gemini-2.5-flash attempt 0.
+- GATES.md refresh: #22 targetSdk 34→35 text, Last reviewed bumped to 2026-04-16, new gate-history row added. Commit 1109fdb.
+- Feature code carry-forward: committed the exercise-subject-selector feature work from session 2026-04-11-S1 that had been sitting in the working tree for 5 days. Commit ac318ad (13 files, +151/-89) covering 8-subject selector, Astrology/Geology/Biology subjects + badges, thinking-token fix, sysPmt v10, EXPM v5, UI cleanup.
+- Docs bundle: CHANGELOG.md, PROJECT_SUMMARY.md, PROJECT_LOG.md committed as 2ae9b2e (3 files, +196/-22) — captures both 2026-04-11-S1 and this session's documentation.
+- Gitignore cleanup: added .claude-team/, init.sh, inspect.sh, scan.sh, cldtree.md, dfiles/, DECISION_LOG.md, TECH_DEBT.md, PROJECT_SUMMARY_P1.md to .gitignore. Commit 200c86b.
+- CLAUDE.md pointer: 4-line reference to local .claude-team/CUSTOM_RULES.md. Commit d2f138a.
+- Path B cleanup: `git rm --cached -r android/app/src/main/assets/public/` — 10 files (index.html, privacy.html, main.css, 5 JS files, cordova.js, cordova_plugins.js) untracked. Working tree preserved. android/.gitignore:96 now effective, no more `git add -u` workarounds. Commit 1f6a4e8.
+- GitHub Actions bump for Node.js 24: checkout v4→v6, setup-node v4→v6, setup-java v4→v5, upload-artifact v4→v7. Node.js 20 deprecation annotation silenced (confirmed via full-log grep). Commit 214aed1.
+- 8 commits pushed to origin/main across 3 push operations. Every CI run green (runs 24539063487, 24540390797, 24541248512). Prod /api/health now returns `attempt:0` field — deployed retry code verified live.
 
 Pending:
-- Push commit 71bef46 to trigger CI + Vercel redeploy so prod health.js actually has retry (local changes untested against prod yet)
-- Maintenance: refresh GATES.md #22 text to say targetSdk=35
-- Play Store submission (A1) — still the gating L1 item for launch
-- CHANGELOG.md + PROJECT_SUMMARY.md have uncommitted cross-session content (exercise subject selector from 2026-04-11-S1 + today's A8/A9 entries); defer commit to user decision
+- A1 Play Store signing (L1 gating item, explicitly deferred by user)
+- A2–A11 from HQ briefing: Data Safety form, privacy URL hardening, store listing copy, screenshots (5 phone + 1 tablet), feature graphic 1024×500, content rating questionnaire, Common Sense Media submission (post-launch), landing page schema
+- GATES.md #22 observation: app runs targetSdk 35 (set for Capacitor 7 compat); still satisfies Play Store minimum of 34. No action required; just noted.
 
 Blocks: None
-Next: Push 71bef46 for CI verification, then resume Play Store submission track (A1–A7).
+Next: Resume Play Store submission track — A1 is the gating item. A2, A3, A7 can parallel-track (Security Auditor-owned / Play Store Specialist-owned).
 Gate: 25/25 CLEARED
+Commits this session: 71bef46, 1109fdb, 2ae9b2e, 200c86b, ac318ad, d2f138a, 1f6a4e8, 214aed1
 
 ---
 
