@@ -1,4 +1,4 @@
-const MODEL = 'gemini-2.5-flash-preview-tts';
+const MODEL = 'gemini-3.1-flash-live-preview';
 const BASE = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;
 
 module.exports = async (req, res) => {
