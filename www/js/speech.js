@@ -439,39 +439,80 @@ function _playPCMChunk(base64) {
 }
 
 // REST-only TTS — bypasses Live API WebSocket. Use for Exercise, Spell, and Badge TTS.
-// Chunks at sentence boundaries (max 2 sentences per TTS call) per CLAUDE.md TTS Chunking rule.
+// Chunks at sentence (and long-sentence comma) boundaries per CLAUDE.md TTS
+// Chunking rule. Pipelines fetches so the next TTS call is already in flight
+// while the current chunk is playing — eliminates audible gaps between chunks.
+const _TTS_CHUNK_CHAR_BUDGET = 90;
+
+// Splits a sentence at commas if it's long enough to risk 150-token audio
+// truncation. Short sentences pass through unchanged.
+function _splitLongSentence(sentence) {
+  if (sentence.length <= _TTS_CHUNK_CHAR_BUDGET) return [sentence];
+  if (!sentence.includes(',')) return [sentence];
+  const out = [];
+  let buf = '';
+  for (const piece of sentence.split(/(,)/)) {
+    if ((buf + piece).length > _TTS_CHUNK_CHAR_BUDGET && buf.trim()) { out.push(buf.trim()); buf = piece; }
+    else { buf += piece; }
+  }
+  if (buf.trim()) out.push(buf.trim());
+  return out;
+}
+
+// Fetch one TTS chunk with 2-attempt retry + upstream error logging.
+// Returns the base64 audio string or null on failure.
+async function _fetchTTS(chunk) {
+  let lastErr = null;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const r = await fetch(window.AI_PROXY + '/ai/speak', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: chunk, voice: 'Kore' })
+      });
+      if (r.ok) {
+        const d = await r.json();
+        if (d.audio) return d.audio;
+        lastErr = 'response-missing-audio';
+      } else {
+        lastErr = 'http-' + r.status;
+        try { const eb = await r.json(); if (eb && eb.error) lastErr += ' ' + (typeof eb.error === 'string' ? eb.error : (eb.error.message || JSON.stringify(eb.error)).slice(0, 140)); } catch (_je) { /* non-JSON body */ }
+      }
+    } catch (netErr) { lastErr = 'network: ' + netErr.message; }
+    if (attempt === 0) await new Promise(r => setTimeout(r, 500));
+  }
+  console.warn('[KiddoAI] _fetchTTS failed: ' + lastErr + ' chunk="' + chunk.slice(0, 40) + '"');
+  return null;
+}
+
 async function speakDirect(txt) {
   const clean = txt.replace(/[*_~`#]/g, '').substring(0, 800);
-  const sentences = clean.match(/[^.!?]+[.!?]+/g) || [clean];
+  const rawSentences = clean.match(/[^.!?]+[.!?]+/g) || [clean];
+  // Pre-split any over-budget sentences at commas so the 150-token TTS cap
+  // doesn't truncate mid-sentence.
+  const sentences = [];
+  for (const s of rawSentences) { for (const piece of _splitLongSentence(s.trim())) if (piece) sentences.push(piece); }
+  // Bundle up to 2 short pieces per TTS call; never bundle an over-budget piece.
   const chunks = [];
-  for (let i = 0; i < sentences.length; i += 2) {
-    chunks.push(sentences.slice(i, i + 2).join(' ').trim());
-  }
-  VIZ.start();
-  for (const chunk of chunks) {
-    if (!chunk) continue;
-    let played = false;
-    let lastErr = null;
-    for (let attempt = 0; attempt < 2; attempt++) {
-      try {
-        const r = await fetch(window.AI_PROXY + '/ai/speak', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text: chunk, voice: 'Kore' })
-        });
-        if (r.ok) {
-          const d = await r.json();
-          if (d.audio) { await _playPCMChunk(d.audio); played = true; break; }
-          lastErr = 'response-missing-audio';
-        } else {
-          lastErr = 'http-' + r.status;
-          // Peek at upstream Gemini error so we notice model-deprecation-style
-          // failures the moment they happen, instead of weeks later.
-          try { const eb = await r.json(); if (eb && eb.error) lastErr += ' ' + (typeof eb.error === 'string' ? eb.error : (eb.error.message || JSON.stringify(eb.error)).slice(0, 140)); } catch (_je) { /* non-JSON body */ }
-        }
-      } catch (netErr) { lastErr = 'network: ' + netErr.message; }
-      if (attempt === 0) await new Promise(r => setTimeout(r, 500));
+  let i = 0;
+  while (i < sentences.length) {
+    if (sentences[i].length > _TTS_CHUNK_CHAR_BUDGET || i + 1 >= sentences.length || (sentences[i].length + 1 + sentences[i + 1].length) > _TTS_CHUNK_CHAR_BUDGET) {
+      chunks.push(sentences[i]); i += 1;
+    } else {
+      chunks.push((sentences[i] + ' ' + sentences[i + 1]).trim()); i += 2;
     }
-    if (!played) { console.warn('[KiddoAI] speakDirect chunk failed: ' + lastErr); break; }
+  }
+  if (!chunks.length) { VIZ.stop(); return; }
+
+  VIZ.start();
+  // Pipeline: kick off first fetch before the loop; on each iteration
+  // prefetch the NEXT chunk while we await+play the CURRENT one.
+  let inflight = _fetchTTS(chunks[0]);
+  for (let idx = 0; idx < chunks.length; idx++) {
+    const current = inflight;
+    inflight = (idx + 1 < chunks.length) ? _fetchTTS(chunks[idx + 1]) : null;
+    const audio = await current;
+    if (!audio) { console.warn('[KiddoAI] speakDirect aborting at chunk ' + idx); break; }
+    await _playPCMChunk(audio);
   }
   VIZ.stop();
 }
