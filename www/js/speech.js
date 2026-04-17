@@ -485,6 +485,9 @@ async function _fetchTTS(chunk) {
 }
 
 async function speakDirect(txt) {
+  const _sd0 = performance.now();
+  const _sdLabel = (txt || '').slice(0, 30);
+  console.warn('[KiddoAI][timing] speakDirect start "' + _sdLabel + '..."');
   const clean = txt.replace(/[*_~`#]/g, '').substring(0, 800);
   const rawSentences = clean.match(/[^.!?]+[.!?]+/g) || [clean];
   // Pre-split any over-budget sentences at commas so the 150-token TTS cap
@@ -504,6 +507,7 @@ async function speakDirect(txt) {
   if (!chunks.length) { VIZ.stop(); return; }
 
   VIZ.start();
+  console.warn('[KiddoAI][timing] speakDirect chunks=' + chunks.length + ' lens=[' + chunks.map(c => c.length).join(',') + '] +' + Math.round(performance.now() - _sd0) + 'ms');
   // Pipeline: kick off first fetch before the loop; on each iteration
   // prefetch the NEXT chunk while we await+play the CURRENT one.
   let inflight = _fetchTTS(chunks[0]);
@@ -512,7 +516,9 @@ async function speakDirect(txt) {
     inflight = (idx + 1 < chunks.length) ? _fetchTTS(chunks[idx + 1]) : null;
     const audio = await current;
     if (!audio) { console.warn('[KiddoAI] speakDirect aborting at chunk ' + idx); break; }
+    console.warn('[KiddoAI][timing] chunk ' + idx + ' audio-ready +' + Math.round(performance.now() - _sd0) + 'ms');
     await _playPCMChunk(audio);
+    console.warn('[KiddoAI][timing] chunk ' + idx + ' playback-done +' + Math.round(performance.now() - _sd0) + 'ms');
   }
   VIZ.stop();
 }

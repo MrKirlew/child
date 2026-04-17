@@ -64,24 +64,37 @@ async function spellWord() {
   const btn = document.getElementById('spell-btn'); btn.disabled = true;
   document.getElementById('spell-load').style.display = 'block';
   document.getElementById('spell-result').style.display = 'none';
+
+  // Kick off the "word + letters + That's word" TTS immediately, in parallel
+  // with the AI call. Child hears audio within ~1s, not 3–4s. Everything in
+  // this initial clip is derivable from the word alone — no AI needed.
+  const _t0 = performance.now();
+  console.warn('[KiddoAI][timing] spellWord start word=' + word);
+  const initialLetters = word.split('').join(', ');
+  const initialSpeechPromise = speakDirect(`${word}. ${initialLetters}. That's ${word}.`).then(() => { console.warn('[KiddoAI][timing] initialSpeech done +' + Math.round(performance.now() - _t0) + 'ms'); });
+
   try {
     const grade = S.grade === 'K' ? 'kindergartner' : 'grade ' + S.grade + ' student';
     const prompt = `The child wants to learn the word "${word}". Return ONLY JSON: {"word":"${word}","letters":["c","a","t"],"meaning":"A short kid-friendly definition (1 sentence for a ${grade}).","phonics":"Break it into sounds with pronunciation guide, e.g. cat: k-ae-t (KAT). Show syllables and how to sound it out."}`;
     const raw = await aiGenerate(prompt, '', 250);
+    console.warn('[KiddoAI][timing] aiGenerate done +' + Math.round(performance.now() - _t0) + 'ms');
     let result;
     try { result = JSON.parse(raw.replace(/```json|```/g, '').trim()); } catch (_e) { result = { word: word, letters: word.split(''), meaning: 'A great word to learn!', phonics: '' }; }
     _showSpellResult(result, word);
-    // Speak: word, letter-by-letter, repeat word, phonics, brief meaning
-    const spokenWord = result.word || word;
-    const letters = (result.letters || spokenWord.split('')).join(', ');
-    const phonicsLine = result.phonics ? ` ${result.phonics}.` : '';
-    const meaningLine = result.meaning ? ` It means: ${result.meaning}` : '';
-    speakDirect(`${spokenWord}. ${letters}. That's ${spokenWord}.${phonicsLine}${meaningLine}`);
-    // Add to history
+    // Save to history + badge count now that we have the full result.
     _spellHistory.unshift({ word: result.word || word, letters: result.letters || word.split(''), meaning: result.meaning || '', phonics: result.phonics || '' });
     if (_spellHistory.length > 20) _spellHistory.pop();
     _saveSpellHistory(); _renderSpellHistory();
     S.cnt.Spelling = (S.cnt.Spelling || 0) + 1; saveS(); checkBadges();
+    // Wait for the initial speech to finish, then speak phonics + meaning
+    // as a natural continuation. If the tail is empty (AI failed, no phonics
+    // and no meaning), we silently skip — the initial speech already
+    // delivered the core spelling ceremony.
+    await initialSpeechPromise;
+    const parts = [];
+    if (result.phonics) parts.push(result.phonics + '.');
+    if (result.meaning) parts.push('It means: ' + result.meaning);
+    if (parts.length) speakDirect(parts.join(' '));
   } catch (e) {
     console.error('[KiddoAI] spellWord error:', e.message);
     document.getElementById('spell-meaning').textContent = 'Oops! Could not look up that word. Try again!';
