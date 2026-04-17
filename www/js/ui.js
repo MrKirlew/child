@@ -168,7 +168,22 @@ function _stopSpellMic() {
 function _renderSpellHistory() {
   const el = document.getElementById('spell-history');
   if (!_spellHistory.length) { el.innerHTML = '<p style="color:var(--muted);font-size:12px;padding:6px 0">Type a word above to get started!</p>'; return; }
-  el.innerHTML = _spellHistory.map((h, i) => `<div class="sp-hist"><div class="sp-hist-body" onclick="showSpellResult(${i})" role="button" tabindex="0"><div class="sp-hw">${esc(h.word)}</div><div class="sp-hm">${esc(h.meaning)}</div></div><button class="sp-hist-play" onclick="event.stopPropagation();sayItAgain(${i})" aria-label="Say ${esc(h.word)} again">🔊</button></div>`).join('');
+  el.innerHTML = _spellHistory.map((h, i) => `<div class="sp-hist"><div class="sp-hist-body" data-sp-action="show" data-sp-idx="${i}" role="button" tabindex="0"><div class="sp-hw">${esc(h.word)}</div><div class="sp-hm">${esc(h.meaning)}</div></div><button type="button" class="sp-hist-play" data-sp-action="say" data-sp-idx="${i}" aria-label="Say ${esc(h.word)} again">🔊</button></div>`).join('');
+  // Delegated click listener — attached once, survives re-renders. Cleaner
+  // than inline onclick per tile (no string-eval inside attributes, easier
+  // to extend with keyboard activation, single source of truth for actions).
+  if (!el._delegateInstalled) {
+    el.addEventListener('click', (ev) => {
+      const trg = ev.target.closest('[data-sp-action]');
+      if (!trg) return;
+      const idx = parseInt(trg.getAttribute('data-sp-idx'), 10);
+      if (isNaN(idx)) return;
+      const action = trg.getAttribute('data-sp-action');
+      if (action === 'say') { ev.stopPropagation(); sayItAgain(idx); }
+      else if (action === 'show') { showSpellResult(idx); }
+    });
+    el._delegateInstalled = true;
+  }
 }
 
 /* ══ COPPA CONSENT ══ */

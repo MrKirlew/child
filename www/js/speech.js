@@ -451,6 +451,7 @@ async function speakDirect(txt) {
   for (const chunk of chunks) {
     if (!chunk) continue;
     let played = false;
+    let lastErr = null;
     for (let attempt = 0; attempt < 2; attempt++) {
       try {
         const r = await fetch(window.AI_PROXY + '/ai/speak', {
@@ -460,11 +461,17 @@ async function speakDirect(txt) {
         if (r.ok) {
           const d = await r.json();
           if (d.audio) { await _playPCMChunk(d.audio); played = true; break; }
+          lastErr = 'response-missing-audio';
+        } else {
+          lastErr = 'http-' + r.status;
+          // Peek at upstream Gemini error so we notice model-deprecation-style
+          // failures the moment they happen, instead of weeks later.
+          try { const eb = await r.json(); if (eb && eb.error) lastErr += ' ' + (typeof eb.error === 'string' ? eb.error : (eb.error.message || JSON.stringify(eb.error)).slice(0, 140)); } catch (_je) { /* non-JSON body */ }
         }
-      } catch (_e) { /* retry */ }
+      } catch (netErr) { lastErr = 'network: ' + netErr.message; }
       if (attempt === 0) await new Promise(r => setTimeout(r, 500));
     }
-    if (!played) break;
+    if (!played) { console.warn('[KiddoAI] speakDirect chunk failed: ' + lastErr); break; }
   }
   VIZ.stop();
 }
