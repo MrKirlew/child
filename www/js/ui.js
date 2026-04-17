@@ -71,9 +71,12 @@ async function spellWord() {
     let result;
     try { result = JSON.parse(raw.replace(/```json|```/g, '').trim()); } catch (_e) { result = { word: word, letters: word.split(''), meaning: 'A great word to learn!', phonics: '' }; }
     _showSpellResult(result, word);
-    // Speak: word, letters, definition, phonics
-    const letters = (result.letters || word.split('')).join(', ');
-    speakDirect(`${word}. ${letters}. ${word}. ${result.meaning || ''}. ${result.phonics || ''}`);
+    // Speak: word, letter-by-letter, repeat word, phonics, brief meaning
+    const spokenWord = result.word || word;
+    const letters = (result.letters || spokenWord.split('')).join(', ');
+    const phonicsLine = result.phonics ? ` ${result.phonics}.` : '';
+    const meaningLine = result.meaning ? ` It means: ${result.meaning}` : '';
+    speakDirect(`${spokenWord}. ${letters}. That's ${spokenWord}.${phonicsLine}${meaningLine}`);
     // Add to history
     _spellHistory.unshift({ word: result.word || word, letters: result.letters || word.split(''), meaning: result.meaning || '', phonics: result.phonics || '' });
     if (_spellHistory.length > 20) _spellHistory.pop();
@@ -105,7 +108,20 @@ function showSpellResult(idx) {
   document.getElementById('spell-inp').value = '';
   _showSpellResult(h, h.word);
   const letters = (h.letters || h.word.split('')).join(', ');
-  speakDirect(`${h.word}. ${letters}. ${h.word}. ${h.meaning || ''}. ${h.phonics || ''}`);
+  const phonicsLine = h.phonics ? ` ${h.phonics}.` : '';
+  const meaningLine = h.meaning ? ` It means: ${h.meaning}` : '';
+  speakDirect(`${h.word}. ${letters}. That's ${h.word}.${phonicsLine}${meaningLine}`);
+}
+
+// Lightweight replay — tapped from the 🔊 icon on a history tile.
+// Speaks word + pronunciation + brief meaning from cached data. Does not
+// re-render the detail view above.
+function sayItAgain(idx) {
+  if (idx < 0 || idx >= _spellHistory.length) return;
+  const h = _spellHistory[idx];
+  const phonicsLine = h.phonics ? ` ${h.phonics}.` : '';
+  const meaningLine = h.meaning ? ` It means: ${h.meaning}` : '';
+  speakDirect(`${h.word}.${phonicsLine}${meaningLine}`);
 }
 
 /* ══ SPELL MIC — say a word out loud ══ */
@@ -152,7 +168,7 @@ function _stopSpellMic() {
 function _renderSpellHistory() {
   const el = document.getElementById('spell-history');
   if (!_spellHistory.length) { el.innerHTML = '<p style="color:var(--muted);font-size:12px;padding:6px 0">Type a word above to get started!</p>'; return; }
-  el.innerHTML = _spellHistory.map((h, i) => `<div class="sp-hist" onclick="showSpellResult(${i})"><div class="sp-hw">${esc(h.word)}</div><div class="sp-hm">${esc(h.meaning)}</div></div>`).join('');
+  el.innerHTML = _spellHistory.map((h, i) => `<div class="sp-hist"><div class="sp-hist-body" onclick="showSpellResult(${i})" role="button" tabindex="0"><div class="sp-hw">${esc(h.word)}</div><div class="sp-hm">${esc(h.meaning)}</div></div><button class="sp-hist-play" onclick="event.stopPropagation();sayItAgain(${i})" aria-label="Say ${esc(h.word)} again">🔊</button></div>`).join('');
 }
 
 /* ══ COPPA CONSENT ══ */

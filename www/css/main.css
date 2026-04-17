@@ -153,10 +153,14 @@ html,body{height:100%;overflow:hidden;background:linear-gradient(180deg,#E0E7FF 
 #tab-spell.on{display:flex}
 #tb-spell.on{color:#7C3AED}
 .sp-letter{background:linear-gradient(135deg,#EDE9FE,#FDF4FF);border:2px solid #DDD6FE;border-radius:10px;padding:8px 12px;font-family:'Fredoka One',cursive;font-size:20px;color:var(--purple);min-width:36px;text-align:center;text-transform:uppercase}
-.sp-hist{background:#F5F3FF;border-radius:9px;padding:8px 10px;display:flex;gap:8px;align-items:center;margin-bottom:5px;cursor:pointer}
+.sp-hist{background:#F5F3FF;border-radius:9px;padding:6px 8px 6px 10px;display:flex;gap:6px;align-items:center;margin-bottom:5px}
 .sp-hist:hover{background:#EDE9FE}
+.sp-hist-body{flex:1;display:flex;gap:8px;align-items:center;min-height:44px;cursor:pointer}
 .sp-hw{font-family:'Fredoka One',cursive;font-size:14px;color:var(--purple);flex:1}
 .sp-hm{font-size:10px;color:var(--muted);flex:2}
+.sp-hist-play{flex:0 0 44px;width:44px;height:44px;min-width:44px;border-radius:50%;background:linear-gradient(135deg,#F5F3FF,#FDF4FF);border:2px solid #DDD6FE;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--purple)}
+.sp-hist-play:hover{background:linear-gradient(135deg,#EDE9FE,#F5F3FF);transform:scale(1.05)}
+.sp-hist-play:active{transform:scale(.95)}
 
 /* TAB BAR */
 #tabbar{height:calc(64px + env(safe-area-inset-bottom,0));display:flex;align-items:stretch;border-top:2px solid #E2E8F0;flex-shrink:0;background:#FFFFFF;padding-bottom:env(safe-area-inset-bottom,0)}
@@ -259,6 +263,8 @@ body.mode-night .owl-t #osv{animation-duration:1s}
 body.mode-night #spell-card{background:#16213E;border-color:#0F3460}
 body.mode-night .sp-letter{background:linear-gradient(135deg,#1A1A2E,#16213E);border-color:#0F3460;color:#9BA1FF}
 body.mode-night .sp-hist{background:#1A1A2E}
+body.mode-night .sp-hist-play{background:linear-gradient(135deg,#1A1A2E,#16213E);border-color:#0F3460;color:#9BA1FF}
+body.mode-night .sp-hist-play:hover{background:linear-gradient(135deg,#16213E,#0F3460)}
 body.mode-night #rstbtn{background:rgba(248,113,113,.06);border-color:rgba(248,113,113,.2)}
 
 /* Accessibility: focus outlines for keyboard navigation */
