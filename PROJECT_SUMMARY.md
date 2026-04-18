@@ -9,7 +9,20 @@
 
 | File | Entries | Date Range |
 |------|---------|------------|
-| PROJECT_SUMMARY.md | 39 | 2025-04-07 – present |
+| PROJECT_SUMMARY.md | 40 | 2025-04-07 – present |
+
+---
+
+## 2026-04-18 19:16 UTC — Session Wrap-Up (Team Child HQ Out)
+**Session:** 2026-04-18-S1 (02:02 – 19:16 UTC)
+**Member:** Dev Lead (full team, 9/9 present)
+**Done:** HQ briefing at 02:02 UTC (zero tactics removed by §0). Three feature fixes shipped + verified on Pixel 7 Pro 192.168.1.236:46703: (1) Learn-tab Live API — dropped dead `gemini-2.5-flash-native-audio-preview-12-2025`, migrated realtime mic envelope to `realtimeInput.audio`, added close-code logging, tightened setup timeout 15s→8s. Cold-start 16s → 2.3s measured. (2) B1 chunker + probe removal — shipped `_FIRST_CHUNK_FAST_BUDGET=40` priority chunk-0 logic (warm-path 1671ms verified), removed 7 timing probes from 5a83494. (3) Phonics TTS unblock — root-caused `http-400 "Model tried to generate text"` as IPA-style input triggering TTS model to interpret as generation request (5/5 repro vs 0/5 with TTS-friendly format). Dual fix: AI prompt rewrite + client-side `_phonicsToSpeech` sanitizer for cached legacy entries.
+**Gate:** 25/25 CLEARED on all 3 feature commits
+**Pending:** A1 Play Store signing (L1 gating, deferred); A2–A11 HQ actions queued
+**Blocks:** None
+**Next:** Resume Play Store submission — A1 gating, A2/A3/A7 parallel-trackable
+**Commits:** 4f7ccd2, cc8d87f, 4ce358a, b9cccdb, 0bc8539 (5 pushed; every CI run green: 24594796993, 24595045555, 24595581230)
+**Lifecycle:** Compressed PROJECT_LOG.md entries 2026-04-09→2026-04-11 (project foundation phase) to one-line per Team Child Out protocol.
 
 ---
 
