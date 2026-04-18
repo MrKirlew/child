@@ -7,6 +7,7 @@ Format: `- [type] description` — types: `feat`, `fix`, `refactor`, `chore`
 
 ## [Unreleased]
 
+- [fix] Spell tab: phonics + meaning now actually get spoken after the initial spelling ceremony. Previously the IPA-style phonics format from the AI (e.g. `lad-der: l-a-d (LAD) - d-er (DER).`) made the Gemini TTS model abort with `http-400 "Model tried to generate text, but it should only be used for TTS"`, which silently aborted the whole second TTS leg. Two-part fix: (1) prompt rewritten to ask the AI for TTS-friendly syllables from the start (`lad. der.` style); (2) defensive client-side `_phonicsToSpeech` sanitizer strips parens / dashes / colons before sending to TTS, so already-cached history entries with the old format also play correctly.
 - [fix] Spell tab: emit the very first short sentence of any TTS clip as its own chunk so the first audio plays in ~1.7s warm-path instead of ~5s. Subsequent chunks pipeline behind it so there's no audible gap. Most visible on the 🔊 history-replay tap.
 - [chore] Remove the `[KiddoAI][timing]` console probes from `ui.js` and `speech.js` that were added in `5a83494` for measurement — chunker tuning is verified and the probes have served their purpose.
 - [fix] Learn tab: drop deprecated `gemini-2.5-flash-native-audio-preview-12-2025` from Live API model list; use `gemini-3.1-flash-live-preview` directly. Eliminates ~15s dead-model setup-timeout wait on every Learn-tab mic cold start (measured 16s → 2.3s tap-to-ready on Pixel 7 Pro). Setup timeout tightened from 15s to 8s now that the model is known-good.

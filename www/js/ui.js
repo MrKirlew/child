@@ -56,6 +56,22 @@ let _spellHistory = [];
 (function _loadSpellHistory() { try { _spellHistory = JSON.parse(localStorage.getItem('kai5_spell') || '[]'); } catch (_e) { _spellHistory = []; } })();
 function _saveSpellHistory() { try { localStorage.setItem('kai5_spell', JSON.stringify(_spellHistory.slice(0, 20))); } catch (_e) { /* quota */ } }
 
+// IPA-style phonics like `lad-der: l-a-d (LAD) - d-er (DER)` make the TTS
+// model abort with http-400 ("Model tried to generate text, but it should
+// only be used for TTS"). Strip parenthetical IPA brackets, turn dashes
+// and colons between sounds into period-separated syllables. Result reads
+// naturally and stops triggering the model's text-generation interpretation.
+function _phonicsToSpeech(p) {
+  if (!p) return '';
+  return String(p)
+    .replace(/\([^)]*\)/g, '')
+    .replace(/\s*-\s*/g, '. ')
+    .replace(/:/g, '.')
+    .replace(/\s+/g, ' ')
+    .replace(/\.+/g, '.')
+    .trim();
+}
+
 async function spellWord() {
   const inp = document.getElementById('spell-inp');
   const word = inp.value.trim().toLowerCase();
@@ -73,7 +89,7 @@ async function spellWord() {
 
   try {
     const grade = S.grade === 'K' ? 'kindergartner' : 'grade ' + S.grade + ' student';
-    const prompt = `The child wants to learn the word "${word}". Return ONLY JSON: {"word":"${word}","letters":["c","a","t"],"meaning":"A short kid-friendly definition (1 sentence for a ${grade}).","phonics":"Break it into sounds with pronunciation guide, e.g. cat: k-ae-t (KAT). Show syllables and how to sound it out."}`;
+    const prompt = `The child wants to learn the word "${word}". Return ONLY JSON: {"word":"${word}","letters":["c","a","t"],"meaning":"A short kid-friendly definition (1 sentence for a ${grade}).","phonics":"Break the word into syllables a child can hear out loud. Use periods between sounds, no parentheses, no IPA brackets, no colons. Example for cat: 'kuh. ah. tuh.' Example for ladder: 'lad. der.'"}`;
     const raw = await aiGenerate(prompt, '', 250);
     let result;
     try { result = JSON.parse(raw.replace(/```json|```/g, '').trim()); } catch (_e) { result = { word: word, letters: word.split(''), meaning: 'A great word to learn!', phonics: '' }; }
@@ -89,7 +105,8 @@ async function spellWord() {
     // delivered the core spelling ceremony.
     await initialSpeechPromise;
     const parts = [];
-    if (result.phonics) parts.push(result.phonics + '.');
+    const safePhonics = _phonicsToSpeech(result.phonics);
+    if (safePhonics) parts.push(safePhonics + '.');
     if (result.meaning) parts.push('It means: ' + result.meaning);
     if (parts.length) speakDirect(parts.join(' '));
   } catch (e) {
@@ -118,7 +135,8 @@ function showSpellResult(idx) {
   document.getElementById('spell-inp').value = '';
   _showSpellResult(h, h.word);
   const letters = (h.letters || h.word.split('')).join(', ');
-  const phonicsLine = h.phonics ? ` ${h.phonics}.` : '';
+  const safePhonics = _phonicsToSpeech(h.phonics);
+  const phonicsLine = safePhonics ? ` ${safePhonics}.` : '';
   const meaningLine = h.meaning ? ` It means: ${h.meaning}` : '';
   speakDirect(`${h.word}. ${letters}. That's ${h.word}.${phonicsLine}${meaningLine}`);
 }
@@ -129,7 +147,8 @@ function showSpellResult(idx) {
 function sayItAgain(idx) {
   if (idx < 0 || idx >= _spellHistory.length) return;
   const h = _spellHistory[idx];
-  const phonicsLine = h.phonics ? ` ${h.phonics}.` : '';
+  const safePhonics = _phonicsToSpeech(h.phonics);
+  const phonicsLine = safePhonics ? ` ${safePhonics}.` : '';
   const meaningLine = h.meaning ? ` It means: ${h.meaning}` : '';
   speakDirect(`${h.word}.${phonicsLine}${meaningLine}`);
 }
