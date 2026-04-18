@@ -68,16 +68,13 @@ async function spellWord() {
   // Kick off the "word + letters + That's word" TTS immediately, in parallel
   // with the AI call. Child hears audio within ~1s, not 3–4s. Everything in
   // this initial clip is derivable from the word alone — no AI needed.
-  const _t0 = performance.now();
-  console.warn('[KiddoAI][timing] spellWord start word=' + word);
   const initialLetters = word.split('').join(', ');
-  const initialSpeechPromise = speakDirect(`${word}. ${initialLetters}. That's ${word}.`).then(() => { console.warn('[KiddoAI][timing] initialSpeech done +' + Math.round(performance.now() - _t0) + 'ms'); });
+  const initialSpeechPromise = speakDirect(`${word}. ${initialLetters}. That's ${word}.`);
 
   try {
     const grade = S.grade === 'K' ? 'kindergartner' : 'grade ' + S.grade + ' student';
     const prompt = `The child wants to learn the word "${word}". Return ONLY JSON: {"word":"${word}","letters":["c","a","t"],"meaning":"A short kid-friendly definition (1 sentence for a ${grade}).","phonics":"Break it into sounds with pronunciation guide, e.g. cat: k-ae-t (KAT). Show syllables and how to sound it out."}`;
     const raw = await aiGenerate(prompt, '', 250);
-    console.warn('[KiddoAI][timing] aiGenerate done +' + Math.round(performance.now() - _t0) + 'ms');
     let result;
     try { result = JSON.parse(raw.replace(/```json|```/g, '').trim()); } catch (_e) { result = { word: word, letters: word.split(''), meaning: 'A great word to learn!', phonics: '' }; }
     _showSpellResult(result, word);

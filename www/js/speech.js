@@ -497,9 +497,6 @@ async function _fetchTTS(chunk) {
 }
 
 async function speakDirect(txt) {
-  const _sd0 = performance.now();
-  const _sdLabel = (txt || '').slice(0, 30);
-  console.warn('[KiddoAI][timing] speakDirect start "' + _sdLabel + '..."');
   const clean = txt.replace(/[*_~`#]/g, '').substring(0, 800);
   const rawSentences = clean.match(/[^.!?]+[.!?]+/g) || [clean];
   // Pre-split any over-budget sentences at commas so the 150-token TTS cap
@@ -507,8 +504,17 @@ async function speakDirect(txt) {
   const sentences = [];
   for (const s of rawSentences) { for (const piece of _splitLongSentence(s.trim())) if (piece) sentences.push(piece); }
   // Bundle up to 2 short pieces per TTS call; never bundle an over-budget piece.
+  // Chunk-0 priority: emit the very first sentence ALONE if short — its TTS
+  // inference round-trip dominates first-audio latency (measured warm-path:
+  // 7-char chunk returns in ~1.7s vs ~5s for a 26-char bundled chunk).
+  // Subsequent chunks pipeline while chunk 0 plays, so the user doesn't feel
+  // extra gaps from the split.
+  const _FIRST_CHUNK_FAST_BUDGET = 40;
   const chunks = [];
   let i = 0;
+  if (sentences.length > 1 && sentences[0].length <= _FIRST_CHUNK_FAST_BUDGET) {
+    chunks.push(sentences[0]); i = 1;
+  }
   while (i < sentences.length) {
     if (sentences[i].length > _TTS_CHUNK_CHAR_BUDGET || i + 1 >= sentences.length || (sentences[i].length + 1 + sentences[i + 1].length) > _TTS_CHUNK_CHAR_BUDGET) {
       chunks.push(sentences[i]); i += 1;
@@ -519,7 +525,6 @@ async function speakDirect(txt) {
   if (!chunks.length) { VIZ.stop(); return; }
 
   VIZ.start();
-  console.warn('[KiddoAI][timing] speakDirect chunks=' + chunks.length + ' lens=[' + chunks.map(c => c.length).join(',') + '] +' + Math.round(performance.now() - _sd0) + 'ms');
   // Pipeline: kick off first fetch before the loop; on each iteration
   // prefetch the NEXT chunk while we await+play the CURRENT one.
   let inflight = _fetchTTS(chunks[0]);
@@ -528,9 +533,7 @@ async function speakDirect(txt) {
     inflight = (idx + 1 < chunks.length) ? _fetchTTS(chunks[idx + 1]) : null;
     const audio = await current;
     if (!audio) { console.warn('[KiddoAI] speakDirect aborting at chunk ' + idx); break; }
-    console.warn('[KiddoAI][timing] chunk ' + idx + ' audio-ready +' + Math.round(performance.now() - _sd0) + 'ms');
     await _playPCMChunk(audio);
-    console.warn('[KiddoAI][timing] chunk ' + idx + ' playback-done +' + Math.round(performance.now() - _sd0) + 'ms');
   }
   VIZ.stop();
 }

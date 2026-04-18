@@ -7,6 +7,8 @@ Format: `- [type] description` — types: `feat`, `fix`, `refactor`, `chore`
 
 ## [Unreleased]
 
+- [fix] Spell tab: emit the very first short sentence of any TTS clip as its own chunk so the first audio plays in ~1.7s warm-path instead of ~5s. Subsequent chunks pipeline behind it so there's no audible gap. Most visible on the 🔊 history-replay tap.
+- [chore] Remove the `[KiddoAI][timing]` console probes from `ui.js` and `speech.js` that were added in `5a83494` for measurement — chunker tuning is verified and the probes have served their purpose.
 - [fix] Learn tab: drop deprecated `gemini-2.5-flash-native-audio-preview-12-2025` from Live API model list; use `gemini-3.1-flash-live-preview` directly. Eliminates ~15s dead-model setup-timeout wait on every Learn-tab mic cold start (measured 16s → 2.3s tap-to-ready on Pixel 7 Pro). Setup timeout tightened from 15s to 8s now that the model is known-good.
 - [fix] Learn tab: switch realtime mic envelope from deprecated `realtimeInput.mediaChunks[]` to `realtimeInput.audio` — `gemini-3.1-flash-live-preview` rejects the legacy field with WebSocket close code 1007, which previously caused a silent reconnect loop on every Learn-tab voice turn.
 - [chore] Learn tab: log Live WebSocket close code + reason on disconnect so future schema/contract drift surfaces in logcat instead of silently looping.
