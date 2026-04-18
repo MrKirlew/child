@@ -9,7 +9,24 @@
 
 | File | Entries | Date Range |
 |------|---------|------------|
-| PROJECT_SUMMARY.md | 37 | 2025-04-07 – present |
+| PROJECT_SUMMARY.md | 38 | 2025-04-07 – present |
+
+---
+
+## 2026-04-18-S1 — B1 Chunker + Probe Removal (commit cc8d87f)
+**Session:** 2026-04-18-S1
+**Member:** Dev Lead + AI Engineer + QA Lead (full team)
+**Task:** Per user "commit in working tree" — ship the S1-carry-forward `_FIRST_CHUNK_FAST_BUDGET=40` chunker change in `speakDirect` AND remove the 7 `[KiddoAI][timing]` probes from `5a83494` (per S1 plan).
+**Behavior:** When a TTS clip has 2+ sentences AND sentence 0 is ≤ 40 chars, emit sentence 0 as a standalone first chunk. Subsequent chunks pipeline behind it (existing logic). Behavior-equivalent on every other path.
+**Device verification (Pixel 7 Pro 192.168.1.236:46703):**
+- Warm path "ladder" 🔊 history-replay: chunks=[7,34,83,28], chunk 0 audio-ready **+1671ms**, playback-done +2826ms — under the 1800ms criterion ✅
+- Cold path "ladder" first lookup: chunks=[7,32], chunk 0 +4050ms (cold-start TTS overhead dominates; B1 still saves vs ~5s baseline)
+**Probes removed:** `ui.js:72,74,80` (3) + `speech.js:502,530,539,541` (4) = 7 total
+**Gate:** 25/25 CLEARED (touches #6 audio playback timing only; CI run 24595045555 all 3 jobs green)
+**Changed files:** www/js/speech.js, www/js/ui.js, CHANGELOG.md
+**New finding (separate task — not blocking this commit):** Gemini TTS endpoint returns `http-400 "Model tried to generate text, but it should only be used for TTS"` for phonics chunks like `"lad-der: l-a-d (LAD) - d-er (DER)."` — aborts the second TTS leg of `spellWord`. The phonics + meaning never get spoken to the child. Pre-existing bug surfaced by today's verification logs.
+**Blocks:** None
+**Pending:** Phonics-TTS http-400 bug (new); A1–A11 still queued (unchanged)
 
 ---
 
