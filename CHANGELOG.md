@@ -7,6 +7,9 @@ Format: `- [type] description` — types: `feat`, `fix`, `refactor`, `chore`
 
 ## [Unreleased]
 
+- [fix] Learn tab: drop deprecated `gemini-2.5-flash-native-audio-preview-12-2025` from Live API model list; use `gemini-3.1-flash-live-preview` directly. Eliminates ~15s dead-model setup-timeout wait on every Learn-tab mic cold start (measured 16s → 2.3s tap-to-ready on Pixel 7 Pro). Setup timeout tightened from 15s to 8s now that the model is known-good.
+- [fix] Learn tab: switch realtime mic envelope from deprecated `realtimeInput.mediaChunks[]` to `realtimeInput.audio` — `gemini-3.1-flash-live-preview` rejects the legacy field with WebSocket close code 1007, which previously caused a silent reconnect loop on every Learn-tab voice turn.
+- [chore] Learn tab: log Live WebSocket close code + reason on disconnect so future schema/contract drift surfaces in logcat instead of silently looping.
 - [fix] CI health check retries on transient Gemini 429/503 — `api/health.js` now loops up to 3 attempts with 1s/2s exponential backoff; CI curl step gains `--retry 2 --retry-delay 5 --retry-all-errors --max-time 40`
 - [fix] Restore `android/.gitignore` and `android/app/.gitignore` so `npx cap copy android` detects the platform again in local dev — no more manual `cp` workaround
 - [feat] Exercises: subject selector — child picks from 8 subjects (Comprehension, Grammar, Astrology, Geology, Biology, Engineering, Technology, Math) before exercising

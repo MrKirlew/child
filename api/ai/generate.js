@@ -1,5 +1,5 @@
 // Text generation models — native audio models don't support text output
-// Native audio (gemini-2.5-flash-native-audio-preview-12-2025, gemini-3.1-flash-live-preview) used via Live API WebSocket only
+// Live audio (gemini-3.1-flash-live-preview) is used via Live API WebSocket only
 const PRIMARY = 'gemini-2.5-flash';
 const FALLBACK = 'gemini-2.0-flash';
 const API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';

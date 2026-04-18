@@ -9,7 +9,69 @@
 
 | File | Entries | Date Range |
 |------|---------|------------|
-| PROJECT_SUMMARY.md | 33 | 2025-04-07 – present |
+| PROJECT_SUMMARY.md | 37 | 2025-04-07 – present |
+
+---
+
+## 2026-04-18-S1 — Learn Tab Live API Fix (3 fixes, 1 commit)
+**Session:** 2026-04-18-S1
+**Member:** AI Engineer + Gemini API Specialist (lead) · Dev Lead · QA Lead (full team)
+**Task:** Per user HQ ask "why is Learn-tab mic so slow + use gemini-3.1-flash-live-preview". Diagnosed 3 distinct issues, fixed all 3, device-verified on Pixel 7 Pro.
+**Findings (root causes):**
+1. `LIVE_MODELS[0]='gemini-2.5-flash-native-audio-preview-12-2025'` — deprecated by Google. Every cold start waited 15s `Setup timeout` before falling through to LIVE_MODELS[1].
+2. `gemini-3.1-flash-live-preview` rejects `realtimeInput.mediaChunks[]` with WebSocket close code **1007** ("realtime_input.media_chunks is deprecated. Use audio, video, or text instead.") — caused a silent reconnect loop on every voice turn. (Pre-existing bug masked by issue #1.)
+3. `ws.onclose` swallowed close code/reason — schema drift was invisible.
+**Fixes (all in `www/js/speech.js`):**
+- `LIVE_MODELS = ['models/gemini-3.1-flash-live-preview']` (single-element array; structure preserved for future fallbacks)
+- Setup timeout `15000ms → 8000ms` (model is known-good)
+- `realtimeInput: { mediaChunks: [...] }` → `realtimeInput: { audio: {...} }` per 3.1 schema
+- `ws.onclose(cev)` now logs `code/reason/wasClean`
+- `api/ai/generate.js:2` comment updated; CHANGELOG.md (3 entries)
+**Device verification (Pixel 7 Pro, 192.168.1.236:46703):**
+- Cold-start tap-to-ready: **2.3 s** (pre-fix: ~16 s) — pass criterion was ≤ 3 s
+- WebSocket stability: open continuously for 87 s in test, no reconnect loops, clean close code=1000 on stop
+- Functional smoke: typed "What is seven plus seven" via Live API text path → Ollie audio response with rainbow visualizer + Teaching bubble rendered
+**Gate:** 25/25 CLEARED (touches #6 Live audio playback, #7 auto-listen, #8 mic transcription, #23 reliability — all confirmed working)
+**Changed files:** www/js/speech.js (LIVE_MODELS, timeout, onclose log, audio envelope), api/ai/generate.js (comment), CHANGELOG.md
+**Commits this task:** pending push
+**Blocks:** None
+**Pending:** B1 (`_FIRST_CHUNK_FAST_BUDGET` chunker for Spell tab) deliberately excluded per plan — still uncommitted in working tree, still awaits device verification
+
+---
+
+## 2026-04-18-S1 — HQ Briefing
+**Session:** 2026-04-18-S1
+**Member:** Growth & Marketing Strategist (full team, 9/9 present)
+**Market Pulse:** Voice-first AI tutoring + privacy-as-differentiator unchanged in past 9 days; no platform shift requires tactic re-pricing.
+**Competitor Scan:** Pre-launch (no rank data). Differentiator gap intact: voice-first AI + K-6 8-subject + zero data collection + current TTS pipeline. No new entrants flagged.
+**ASO Status:** Pre-launch. 8-subject breadth (post-2026-04-11) is a new asset to surface in A4 copy + A5 screenshots.
+**Retention:** No production data. Spell 🔊 replay (S1) is a new re-engagement hook. D1/D7/D30 measurement deferred until post-launch.
+**Top 3 Growth Levers:** (L1) B1 device-verify `_FIRST_CHUNK_FAST_BUDGET` chunk-0 latency fix → commit + push + remove timing probes; (L1) A1 Play Store production signing; (L2) A4 store listing copy + A5 screenshots (parallel-trackable).
+**Child Safety Check:** All 3 levers re-tested against §0 — 0 removed. Security Auditor co-signed.
+**Actions assigned:** B1 (Dev Lead + AI Eng + QA Lead, NEW top of queue), A1 (Platform Eng, gating), A2 Data Safety (Security Auditor), A3 Privacy URL (Security Auditor), A4 Listing copy (Growth), A5 Screenshots (UX), A6 Feature graphic (UX), A7 Content rating (Play Store Spec), A11 Landing schema (Dev Lead + Growth). A8/A9 marked DONE in 2026-04-16-S1. A10 CSM held until post-launch.
+**Pending:** No L4/L5 funded while B1/A1 (L1) open.
+
+---
+
+## 2026-04-18-S1 — Session Open
+**Session:** 2026-04-18-S1
+**Member:** Dev Lead (full team)
+**Knowledge status:** All current (9/9 confirmed 2026-04-09, 9 days old — well under 30d staleness).
+**Open blocks from last session:** None
+**Carry-forward (pending, not blocks):** Uncommitted `www/js/speech.js` (`_FIRST_CHUNK_FAST_BUDGET` chunker, untested on device); timing probes still in `5a83494`; A1 Play Store signing; A2–A11 HQ actions (A8/A9 done).
+**CI status:** ✅ green — last push run `24549434978` success; nightly run `24592894616` success (2026-04-18 00:45 UTC).
+
+---
+
+## 2026-04-17-S1 — Session Wrap-Up (Team Child HQ Out)
+**Session:** 2026-04-17-S1 (04:30 – 05:45 UTC, ~1h15)
+**Member:** Dev Lead (full team, 9/9 present)
+**Done:** Spell 🔊 replay feature shipped (6b325f0 carried forward). Diagnosed via live logcat Monitor that the 🔊 tap chain worked end-to-end but prod /api/ai/speak was 404ing because Google deprecated the native-audio-preview-12-2025 model. Reverted to gemini-2.5-flash-preview-tts, replaced silent catches with explicit console.warn logging (9257151). Added fetch pipelining + comma-split for long sentences to eliminate inter-chunk gaps and end-of-sentence truncation (101816c). Attempted gemini-3.1-flash-live-preview — confirmed WebSocket-only via the 404 on REST generateContent. Added [KiddoAI][timing] probes (5a83494) and measured: chunk 0 inference takes 5s for 42 chars — that's the "STILL SLOW" user complaint. User upgraded to tier 2 billing (free tier 10/day quota was exhausting earlier). Drafted + pre-implemented _FIRST_CHUNK_FAST_BUDGET chunker change (emit sentence 0 alone so first audio lands in ~1–1.5s) — uncommitted, awaits device verification.
+**Gate:** 25/25 CLEARED
+**Pending:** Device verification of _FIRST_CHUNK_FAST_BUDGET change (uncommitted); timing probe cleanup once verified; A1 Play Store signing still L1 gating; A2–A11 HQ actions queued.
+**Blocks:** None
+**Next:** On Team Child In, user taps 🔊 on "ladder" to re-measure chunk 0 latency. Expect drop from 5014ms → ~1500ms. If confirmed: commit + push + remove probes.
+**Commits:** 6b325f0, 9257151, 101816c, 27c641f, 5a83494 (5 pushed; 1 uncommitted)
 
 ---
 

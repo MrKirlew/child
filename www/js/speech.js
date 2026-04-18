@@ -1,7 +1,11 @@
 /* ══ GEMINI LIVE API — WebSocket voice conversation ══ */
 /* globals: S, VIZ, reportError, esc, addBub, addTyp, rmTyp, saveS, checkBadges, SUBS, sysPmt, handleVoiceAns, stopEMic, rememberConversationTurn, recordLearnActivity */
 
-const LIVE_MODELS = ['models/gemini-2.5-flash-native-audio-preview-12-2025', 'models/gemini-3.1-flash-live-preview'];
+// Single Live API model. The earlier `gemini-2.5-flash-native-audio-preview-12-2025`
+// was deprecated by Google on/before 2026-04-17 and never returned setupComplete,
+// causing every Learn-tab mic tap to wait the full setup timeout before falling
+// through. Array shape kept so future fallbacks are a one-line edit.
+const LIVE_MODELS = ['models/gemini-3.1-flash-live-preview'];
 let _liveModelIdx = 0;
 
 let _ws = null, _micStream = null, _micProcessor = null, _audioCtx = null;
@@ -35,7 +39,7 @@ async function _connectLive() {
 
   await new Promise((resolve, reject) => {
     const ws = new WebSocket(url);
-    const timeout = setTimeout(() => { ws.close(); reject(new Error('Setup timeout')); }, 15000);
+    const timeout = setTimeout(() => { ws.close(); reject(new Error('Setup timeout')); }, 8000);
 
     ws.onopen = () => {
       console.warn('[KiddoAI] WebSocket OPEN, sending setup...');
@@ -79,7 +83,11 @@ async function _connectLive() {
           _ws = ws;
           ws.onmessage = _handleServerMsg;
           ws.onerror = () => { reportError('live-ws', 'WebSocket error', 'session'); };
-          ws.onclose = () => {
+          ws.onclose = (cev) => {
+            // Surface the close code + reason so we can tell intentional server-side
+            // session ends from protocol/contract failures (e.g. realtime input
+            // schema rejected). Without this, reconnect loops are invisible.
+            console.warn('[KiddoAI] live-ws closed code=' + cev.code + ' reason="' + (cev.reason || '') + '" wasClean=' + cev.wasClean);
             _ws = null;
             if (_conversing) {
               setTimeout(() => { if (_conversing) _connectLive().then(_startMicStream).catch(() => {}); }, 1000);
@@ -240,8 +248,12 @@ async function _startMicStream() {
     let binary = '';
     for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
     const b64 = btoa(binary);
+    // gemini-3.1-flash-live-preview deprecated `mediaChunks` (close code 1007:
+    // "realtime_input.media_chunks is deprecated. Use audio, video, or text
+    // instead."). The replacement envelope is `realtimeInput.audio` with the
+    // same Blob shape.
     _ws.send(JSON.stringify({
-      realtimeInput: { mediaChunks: [{ mimeType: 'audio/pcm;rate=16000', data: b64 }] }
+      realtimeInput: { audio: { mimeType: 'audio/pcm;rate=16000', data: b64 } }
     }));
   };
   source.connect(_micProcessor);

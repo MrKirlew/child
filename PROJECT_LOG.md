@@ -26,6 +26,32 @@ Gate:    [X/25 CLEARED | BLOCKED]
 
 ## Log
 
+## 2026-04-17 05:45 UTC — Session Wrap-Up (Team Child HQ Out)
+Session: 2026-04-17-S1
+Done:
+- HQ briefing at 04:30 UTC — all 9 members present, no stale knowledge, no open blocks carried in, last CI green.
+- Spell 🔊 replay icon shipped in commit 6b325f0 (prior session spillover — icon + sayItAgain + delegated click listener + CSS).
+- Diagnosed Spell 🔊 silence via live logcat Monitor: handler chain proved working end-to-end (`sayItAgain FIRED` + `speakDirect called` both logged on tap); silence was downstream.
+- Traced prod /api/ai/speak to HTTP 404 — Google deprecated `gemini-2.5-flash-native-audio-preview-12-2025`. Reverted MODEL to `gemini-2.5-flash-preview-tts` (commit 9257151). Audio restored. Replaced silent catches with explicit console.warn in speakDirect so future model-deprecation outages surface immediately in logcat.
+- Addressed "long gaps + truncation" in TTS (commit 101816c): pipelined speakDirect fetches (prefetch chunk N+1 while chunk N plays) and pre-split sentences >90 chars at commas so Gemini's 150-token audio cap can't truncate mid-sentence.
+- Attempted `gemini-3.1-flash-live-preview` per user request (commit 27c641f) → confirmed HTTP 404 (Live API WebSocket-only model, not compatible with REST generateContent). Reverted + added [KiddoAI][timing] probes (commit 5a83494).
+- User hit free-tier 429 quota wall (10 TTS requests/day on free tier). User upgraded to Tier 2 billing. TTS unblocked — prod /api/ai/speak returns 62 KB PCM in ~1.85s.
+- Timing probe measurement: chunk 0 inference is 5.014s for 42-char chunk → that's the user-visible "dead silence" before first audio. Pipeline works (chunks 1 and 2 land within 4ms of prior playback-done). Fix drafted and implemented (uncommitted) in www/js/speech.js: `_FIRST_CHUNK_FAST_BUDGET=40` emits sentence 0 alone so chunk 0 returns in ~1–1.5s instead of 5s. Device verification interrupted by session close.
+- Token/cost summary shared with user: one 🔊 replay ≈ 3 TTS calls, 147 chars input, ~340 output audio tokens, estimated cost << $0.01 on tier 2.
+
+Pending:
+- **Uncommitted in working tree:** www/js/speech.js — `_FIRST_CHUNK_FAST_BUDGET` chunker change. Untested on device. Next session: confirm first-chunk latency drops from 5s → ~1.5s via monitor, then commit + push.
+- **Timing probes still in main (from 5a83494):** [KiddoAI][timing] console.warn lines in ui.js + speech.js. Remove in the same commit as the chunker fix once verified.
+- A1 Play Store signing — L1 gating item still queued.
+- A2–A11 HQ briefing actions still queued (Data Safety, privacy URL, store listing, screenshots, feature graphic, content rating, CSM post-launch, landing page schema).
+
+Blocks: None
+Next: On session-in, user taps 🔊 on a history word; verify chunk 0 audio-ready ≤ 1800ms; commit + push + remove timing probes.
+Gate: 25/25 CLEARED (no new code touches any gate point; TTS fixes improve #23 reliability signal; #25 CI still green on every push this session)
+Commits this session: 6b325f0, 9257151, 101816c, 27c641f, 5a83494 (5 total; 1 change uncommitted)
+
+---
+
 ## 2026-04-16 20:45 UTC — Session Wrap-Up (Team Child HQ Out)
 Session: 2026-04-16-S1
 Done:
