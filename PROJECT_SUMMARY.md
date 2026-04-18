@@ -9,7 +9,25 @@
 
 | File | Entries | Date Range |
 |------|---------|------------|
-| PROJECT_SUMMARY.md | 38 | 2025-04-07 – present |
+| PROJECT_SUMMARY.md | 39 | 2025-04-07 – present |
+
+---
+
+## 2026-04-18-S1 — Phonics TTS Fix (commit b9cccdb)
+**Session:** 2026-04-18-S1
+**Member:** AI Engineer + Gemini API Specialist (lead) · Dev Lead · QA Lead
+**Task:** Per user "investigate next" — root-cause and fix the http-400 surfaced during cc8d87f verification: TTS endpoint returns `"Model tried to generate text, but it should only be used for TTS"` for IPA-style phonics chunks like `lad-der: l-a-d (LAD) - d-er (DER).`. Spell tab's second TTS leg (phonics + meaning) was silently aborting on every word lookup.
+**Investigation:** Reproduced 5/5 against prod with raw chunk; confirmed 0/5 failures with TTS-friendly format `lad. der.`; "Read aloud:" prefix worked 4/5 but leaked ~0.7s of "Read aloud" into spoken audio on sentence-length inputs. `system_instruction` returned 500 internal errors — TTS preview model doesn't accept it cleanly. Conclusion: fix the input format, not the request envelope.
+**Two-part fix in `www/js/ui.js`:**
+1. **Prompt rewrite** (line 76) — `phonics` field instruction now asks for syllables separated by periods, no parens, no IPA brackets, no colons. AI produces `lad. der.` instead of `lad-der: l-a-d (LAD) - d-er (DER).`
+2. **Defensive sanitizer** `_phonicsToSpeech` — strips paren content, converts dashes/colons between sounds to period-separated syllables. Applied at 3 TTS callsites (initial reveal, history full re-show, 🔊 replay). Handles already-cached history entries with the old IPA format so they play correctly post-fix without requiring re-lookup.
+**Device verification (Pixel 7 Pro 192.168.1.236:46703):**
+- Cached "ladder" 🔊 replay (old IPA in localStorage): zero `_fetchTTS failed` errors, full clip plays end-to-end ✅
+- Fresh "elephant" lookup: AI returned `"el. uh. fant"` (TTS-friendly), zero TTS errors, visual "How to say it" card renders cleanly ✅
+**Gate:** 25/25 CLEARED (touches #6 audio playback, #2 try/catch fallback semantics — both verified; CI run 24595581230 all 3 jobs green)
+**Changed files:** www/js/ui.js (sanitizer + prompt + 3 callsites), CHANGELOG.md
+**Blocks:** None
+**Pending:** A1–A11 unchanged
 
 ---
 
