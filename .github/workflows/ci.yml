@@ -19,8 +19,9 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
+      - run: npm run doctor
       - run: npm run lint
-      - run: npx vitest run
+      - run: npm test
       - name: Check for leaked secrets
         run: |
           if grep -r "AIzaSy" www/ api/ server/index.js 2>/dev/null; then

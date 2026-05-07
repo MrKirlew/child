@@ -3,9 +3,12 @@
   "version": "1.0.0",
   "description": "KiddoAI Tutor - AI-powered educational app for kids (K-6)",
   "scripts": {
+    "doctor": "node scripts/doctor.js",
+    "pretest": "npm run --silent doctor",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:snap": "vitest --update-snapshots",
+    "prelint": "npm run --silent doctor",
     "lint": "eslint 'www/js/**/*.js' 'api/**/*.js' 'server/*.js'",
     "lint:fix": "eslint --fix 'www/js/**/*.js' 'api/**/*.js' 'server/*.js'",
     "build": "npm run lint && npm run test && npx cap sync",
