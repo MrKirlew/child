@@ -1,9 +1,16 @@
+const { withSentry } = require('./_observability');
+
 const API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
 
-module.exports = async (req, res) => {
+const handler = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
+  const meta = {
+    version: process.env.APP_VERSION || 'dev',
+    git_sha: process.env.GIT_SHA || process.env.VERCEL_GIT_COMMIT_SHA || 'dev',
+    env: process.env.APP_ENV || process.env.VERCEL_ENV || 'production',
+  };
   const API_KEY = process.env.GOOGLE_AI_KEY;
-  if (!API_KEY) return res.status(503).json({ ok: false, error: 'API key not configured' });
+  if (!API_KEY) return res.status(503).json({ ok: false, error: 'API key not configured', ...meta });
 
   const model = 'gemini-2.5-flash';
   const url = `${API_BASE}/${model}:generateContent?key=${API_KEY}`;
@@ -27,7 +34,7 @@ module.exports = async (req, res) => {
       });
       clearTimeout(timeout);
       if (r.ok) {
-        return res.json({ status: 'ok', model, attempt, ts: Date.now() });
+        return res.json({ status: 'ok', model, attempt, ts: Date.now(), ...meta });
       }
       if (r.status === 429 || r.status === 503) {
         lastStatus = r.status;
@@ -36,7 +43,7 @@ module.exports = async (req, res) => {
           continue;
         }
       }
-      return res.status(503).json({ ok: false, error: `Model returned ${r.status}`, model, attempt, ts: Date.now() });
+      return res.status(503).json({ ok: false, error: `Model returned ${r.status}`, model, attempt, ts: Date.now(), ...meta });
     } catch (e) {
       clearTimeout(timeout);
       lastErr = e.name === 'AbortError' ? 'Timeout after 8s' : e.message;
@@ -52,6 +59,9 @@ module.exports = async (req, res) => {
     error: lastErr || `Upstream ${lastStatus} after 3 attempts`,
     model,
     attempt: 2,
-    ts: Date.now()
+    ts: Date.now(),
+    ...meta,
   });
 };
+
+module.exports = withSentry(handler);

@@ -19,7 +19,8 @@
     "secret:scan": "git grep -E \"(sk-|AIza|192\\.168|password|1234)\" -- . ':(exclude)*.md' ':(exclude)CHANGELOG.md'"
   },
   "dependencies": {
-    "@capacitor/core": "^7.0.0"
+    "@capacitor/core": "^7.0.0",
+    "@sentry/node": "^10.0.0"
   },
   "devDependencies": {
     "@capacitor/android": "^7.0.0",

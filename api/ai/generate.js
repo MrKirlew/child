@@ -1,3 +1,5 @@
+const { withSentry } = require('../_observability');
+
 // Text generation models — native audio models don't support text output
 // Live audio (gemini-3.1-flash-live-preview) is used via Live API WebSocket only
 const PRIMARY = 'gemini-2.5-flash';
@@ -23,7 +25,7 @@ async function tryGenerate(model, body, apiKey) {
   return { ok: r.ok, status: r.status, data };
 }
 
-module.exports = async (req, res) => {
+const handler = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -64,3 +66,5 @@ module.exports = async (req, res) => {
 
   res.status(503).json({ error: 'All models unavailable. Please try again in a moment.' });
 };
+
+module.exports = withSentry(handler);

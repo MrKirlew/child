@@ -8,6 +8,7 @@
 .env
 .env.*
 .env.local
+!.env.example
 server/.env
 *.key
 google-services.json

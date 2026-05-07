@@ -1,6 +1,8 @@
+const { withSentry } = require('../_observability');
+
 // Returns the WebSocket URL with API key for Gemini Live API
 // The key stays server-side in Vercel env vars — client gets a ready-to-use URL
-module.exports = async (req, res) => {
+const handler = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -14,3 +16,5 @@ module.exports = async (req, res) => {
   const wsUrl = `wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?key=${key}`;
   res.json({ url: wsUrl });
 };
+
+module.exports = withSentry(handler);

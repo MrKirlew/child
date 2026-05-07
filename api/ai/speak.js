@@ -1,3 +1,5 @@
+const { withSentry } = require('../_observability');
+
 const MODEL = 'gemini-2.5-flash-preview-tts';
 const BASE = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;
 
@@ -46,7 +48,7 @@ async function _callGemini(apiKey, text, voice) {
   return { ok: true, audio: audioPart.inlineData.data, mimeType: audioPart.inlineData.mimeType };
 }
 
-module.exports = async (req, res) => {
+const handler = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -83,7 +85,7 @@ module.exports = async (req, res) => {
   }
 };
 
-// Test hooks — kept on the export so Vitest can verify constants without
-// re-parsing the source. Not used by Vercel runtime.
+module.exports = withSentry(handler);
+// Test hooks — attached after wrapping so Vitest can import named exports.
 module.exports.TTS_PREAMBLE = TTS_PREAMBLE;
 module.exports.isClassifierMissError = isClassifierMissError;

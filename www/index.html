@@ -61,7 +61,7 @@
         <button id="stopb" onclick="stopAll()" aria-label="Stop speaking">⏹</button>
         <input id="linp" class="si" placeholder="Type a message..." aria-label="Type a message to Ollie" onkeydown="if(event.key==='Enter'){sendTyped();event.preventDefault();}"/>
         <button id="lsend" onclick="sendTyped()" aria-label="Send message">➤</button>
-        <button id="lmic" onclick="togLMic()" aria-label="Microphone — tap to talk to Ollie">🎤</button>
+        <div class="mic-stage" id="lmic-stage"><button id="lmic" onclick="togLMic()" aria-label="Microphone — tap to talk to Ollie">🎤</button></div>
       </div>
     </div>
 
@@ -78,6 +78,7 @@
         <div class="sb-s"><div class="sb-n" id="sc-b">0</div><div class="sb-l">BEST🔥</div></div>
       </div>
       <div id="ex-subs"></div>
+      <div id="math-skills" style="display:none"></div>
       <div id="exload">Generating exercise... 🤔</div>
       <div id="excard">
         <div id="extag" class="ex-tag"></div>
@@ -98,7 +99,7 @@
           <div id="vatr"></div>
         </div>
         <div id="exctrls" style="display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-top:6px">
-          <button id="exmic" onclick="togExMic()" aria-label="Microphone — speak your answer">🎤</button>
+          <div class="mic-stage" id="exmic-stage"><button id="exmic" onclick="togExMic()" aria-label="Microphone — speak your answer">🎤</button></div>
           <button id="exsubmit" onclick="submitFB()" aria-label="Check answer">Check ✓</button>
           <button id="exnext" onclick="nextEx()" aria-label="Next exercise">Next ➜</button>
           <button id="exnew" onclick="newEx()" aria-label="Generate new exercise">New Exercise 🎲</button>
@@ -136,7 +137,7 @@
         <div style="font-size:12px;color:var(--muted);font-weight:700;text-align:center;margin-bottom:8px">Type or say a word and Ollie will teach you!</div>
         <div style="display:flex;gap:7px;align-items:center">
           <input id="spell-inp" class="si" placeholder="Type a word..." style="text-align:center;flex:1" onkeydown="if(event.key==='Enter'){spellWord();event.preventDefault();}"/>
-          <button id="spell-mic" onclick="togSpellMic()" style="background:linear-gradient(135deg,#EC4899,#F43F5E);border:none;border-radius:50%;width:44px;height:44px;min-width:44px;font-size:18px;cursor:pointer;box-shadow:0 2px 8px rgba(236,72,153,.3);color:#fff" aria-label="Say a word">🎤</button>
+          <div class="mic-stage" id="spell-mic-stage"><button id="spell-mic" onclick="togSpellMic()" style="background:linear-gradient(135deg,#EC4899,#F43F5E);border:none;border-radius:50%;width:44px;height:44px;min-width:44px;font-size:18px;cursor:pointer;box-shadow:0 2px 8px rgba(236,72,153,.3);color:#fff" aria-label="Say a word">🎤</button></div>
           <button id="spell-btn" onclick="spellWord()" style="background:linear-gradient(135deg,#7C3AED,#8B5CF6);border:none;border-radius:13px;padding:11px 18px;font-family:'Nunito',sans-serif;font-weight:800;font-size:13px;color:#fff;cursor:pointer;box-shadow:0 2px 8px rgba(124,58,237,.3);white-space:nowrap">Spell It!</button>
         </div>
         <div id="spell-listening" style="text-align:center;padding:8px;color:#EC4899;font-weight:700;font-size:12px;display:none">🎤 Listening... say a word!</div>
@@ -151,6 +152,15 @@
       <div class="psec" style="margin-top:6px">📝 Recent Words</div>
       <div id="spell-history"></div>
     </div>
+  </div>
+
+  <div id="speech-debug" aria-live="polite">
+    <div class="speech-debug-head">
+      <div class="speech-debug-title">Debug Speech Transcript</div>
+      <button id="speech-debug-clear" type="button" onclick="clearSpeechDebug()">Clear</button>
+    </div>
+    <div id="speech-debug-now">Waiting for Ollie to speak...</div>
+    <div id="speech-debug-list"></div>
   </div>
 
   <div id="tabbar" role="tablist" aria-label="App sections">
@@ -211,9 +221,9 @@
     <div class="pr" id="lwr">
       <div class="pl" data-lw="10" onclick="setListenWait(10)">10s</div>
       <div class="pl" data-lw="20" onclick="setListenWait(20)">20s</div>
-      <div class="pl on" data-lw="30" onclick="setListenWait(30)">30s</div>
+      <div class="pl" data-lw="30" onclick="setListenWait(30)">30s</div>
       <div class="pl" data-lw="45" onclick="setListenWait(45)">45s</div>
-      <div class="pl" data-lw="60" onclick="setListenWait(60)">60s</div>
+      <div class="pl on" data-lw="60" onclick="setListenWait(60)">60s</div>
     </div>
   </div>
   <div class="ds">📈 Activity by Subject</div><div id="d-bars"></div>
@@ -263,6 +273,19 @@ const EX_SUBS=['Comprehension','Grammar','Astrology','Geology','Biology','Engine
 const EX_EMOJI={Comprehension:'📚',Grammar:'✏️',Astrology:'🔭',Geology:'🌍',Biology:'🧬',Engineering:'⚙️',Technology:'💻',Math:'🔢'};
 const SCOL={Spelling:'#F59E0B',Grammar:'#EC4899',Comprehension:'#3B82F6',Astrology:'#8B5CF6',Geology:'#F97316',Biology:'#10B981',Engineering:'#EF4444',Technology:'#6366F1',Math:'#FACC15'};
 const GN={K:'Kindergarten (5-6y): 2-4 letter words, counting 1-20, shapes. Very short responses.',1:'Grade 1 (6-7y): Short vowels, add/subtract, weather, plants. 2-3 sentences.',2:'Grade 2 (7-8y): Long vowels, 2-digit math, animal habitats. 3-4 sentences.',3:'Grade 3 (8-9y): Multi-syllable words, multiplication 1-10, earth science. 3-5 sentences.',4:'Grade 4 (9-10y): Prefixes/suffixes, long division, physical science. 4-5 sentences.',5:'Grade 5 (10-11y): Root words, pre-algebra, life science. 4-6 sentences.',6:'Grade 6 (11-12y): Literary devices, algebra, advanced science. 5-7 sentences.'};
+const MATH_SKILLS=['Counting','Adding','Subtracting','Multiplying','Dividing'];
+const MATH_EMOJI={Counting:'🔢',Adding:'➕',Subtracting:'➖',Multiplying:'✖️',Dividing:'➗'};
+const _GRADE_ORDER={K:0,'1':1,'2':2,'3':3,'4':4,'5':5,'6':6};
+// Every skill has a K-through-6 ladder so the AI always has a level-appropriate
+// framing. The world's best teacher meets the child where they are — never
+// punts a topic to "next year".
+const MATH_SKILL_HINT={
+  Counting:'K: count 1-20 objects out loud. Gr1: skip counting by 2s/5s/10s. Gr2: counting to 100, before/after. Gr3: count by 25s/100s, place value. Gr4: counting in patterns, factors. Gr5: counting strategies for primes. Gr6: counting in sequences and series.',
+  Adding:'K: add within 10 with fingers/objects. Gr1: add within 20, doubles. Gr2: 2-digit addition with regrouping. Gr3: 3-digit addition, mental math. Gr4: multi-digit, decimals to tenths. Gr5: decimals and fractions. Gr6: integers (positive + negative).',
+  Subtracting:'K: take away within 10 using objects. Gr1: subtract within 20, count back. Gr2: 2-digit with borrowing. Gr3: 3-digit subtraction. Gr4: multi-digit, decimals. Gr5: decimals and fraction subtraction. Gr6: integer subtraction.',
+  Multiplying:'K: equal groups concept ("2 plus 2 plus 2 is three groups of two"). Gr1: skip count as multiplication. Gr2: tables 0-5. Gr3: tables 0-10, arrays. Gr4: 2-digit by 1-digit. Gr5: 2-digit by 2-digit, decimals. Gr6: fractions and integers.',
+  Dividing:'K: sharing equally ("share 4 cookies with 2 friends"). Gr1: split into equal groups. Gr2: divide within 20 with objects. Gr3: division facts to 100, remainders. Gr4: long division with 1-digit divisor. Gr5: long division, decimal quotients. Gr6: fractions and integers.'
+};
 const DN={Beginner:'Very easy. Many hints. Celebrate everything.',Novice:'Slightly challenging. Hints when needed.',Intermediate:'Standard pace. Minimal hints.',Hard:'Challenging. Push child deeper.'};
 const SN={Spelling:'Teach phonics, sound it out syllable by syllable. Put chunks in phonics array.',Grammar:'Parts of speech, punctuation, sentence structure with fun examples.',Comprehension:'Short passage then comprehension questions one at a time. Put passage in "passage" field.',Astrology:'Stars, planets, constellations, the solar system, moon phases, space exploration.',Geology:'Rocks, minerals, volcanoes, earthquakes, earth layers, fossils, landforms.',Biology:'Plants, animals, human body, cells, ecosystems, life cycles, habitats.',Technology:'Digital literacy, coding basics, internet safety.',Engineering:'Design thinking, problem solving, structures.',Math:'Step by step with real examples. Show working.'};
 const BADGES=[
@@ -279,12 +302,13 @@ const BADGES=[
   {id:'s15',icon:'🔥🔥',name:'15 Streak!',chk:s=>(s.bestStreak||0)>=15},
   {id:'t20',icon:'⭐',name:'20 Exercises',chk:s=>(s.totalEx||0)>=20},
   {id:'all',icon:'🏆',name:'All-Rounder',chk:s=>EX_SUBS.every(b=>(s.cnt[b]||0)>=1)},
+  {id:'mts10',icon:'🧮',name:'Math Master',chk:s=>Object.values((s.cnt&&s.cnt.MathSkills)||{}).reduce((a,b)=>a+b,0)>=10},
 ];
 
 /* ══ STATE ══ */
 let S={
-  grade:'K',diff:'Beginner',pin:'',listenWait:30,mode:'normal',exSubject:'Math',
-  cnt:{Spelling:0,Grammar:0,Comprehension:0,Astrology:0,Geology:0,Biology:0,Science:0,Technology:0,Engineering:0,Math:0},
+  grade:'K',diff:'Beginner',pin:'',listenWait:60,mode:'calm',exSubject:'Math',mathSkill:'Counting',
+  cnt:{Spelling:0,Grammar:0,Comprehension:0,Astrology:0,Geology:0,Biology:0,Science:0,Technology:0,Engineering:0,Math:0,MathSkills:{Counting:0,Adding:0,Subtracting:0,Multiplying:0,Dividing:0}},
   ex:{Spelling:{c:0,t:0},Grammar:{c:0,t:0},Comprehension:{c:0,t:0},Astrology:{c:0,t:0},Geology:{c:0,t:0},Biology:{c:0,t:0},Science:{c:0,t:0},Technology:{c:0,t:0},Engineering:{c:0,t:0},Math:{c:0,t:0}},
   streak:0,bestStreak:0,totalEx:0,
   earnedBadges:[],recentEx:[],recentQ:[],chatHist:[],busy:false
@@ -361,6 +385,20 @@ const VIZ=(()=>{
 })();
 </script>
 <!-- Module scripts — load order matters: speech needs VIZ, ai needs speech, exercises needs ai, progress needs state, ui needs all -->
+<!-- Sentry browser SDK (errors only — replay/PII disabled for K-6 audience).
+     Fill window.SENTRY_DSN with the project DSN to enable. Empty = no-op. -->
+<script>
+  window.SENTRY_DSN = '';
+  window.APP_ENV = 'production';
+  window.APP_VERSION = 'dev';
+  window.SENTRY_TRACES_SAMPLE_RATE = 0.1;
+  window.LOG_LEVEL = 'info';
+</script>
+<script src="https://browser.sentry-cdn.com/10.52.0/bundle.min.js" crossorigin="anonymous"></script>
+<script src="js/observability.js"></script>
+<script src="js/logger.js"></script>
+<script src="js/countdown.js"></script>
+<script src="js/spell-tools.js"></script>
 <script src="js/speech.js"></script>
 <script src="js/ai.js"></script>
 <script src="js/exercises.js"></script>
