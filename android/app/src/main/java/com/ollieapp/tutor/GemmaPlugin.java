@@ -1,4 +1,4 @@
-package com.kiddoai.tutor;
+package com.ollieapp.tutor;
 
 import android.util.Log;
 
@@ -16,7 +16,7 @@ import com.getcapacitor.annotation.CapacitorPlugin;
 @CapacitorPlugin(name = "GemmaPlugin")
 public class GemmaPlugin extends Plugin {
 
-    private static final String TAG = "KiddoAI-Gemma";
+    private static final String TAG = "Ollie-Gemma";
 
     @Override
     public void load() {

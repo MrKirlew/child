@@ -1,4 +1,4 @@
-package com.kiddoai.tutor;
+package com.ollieapp.tutor;
 
 import android.os.Bundle;
 import android.webkit.PermissionRequest;

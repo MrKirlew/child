@@ -14,6 +14,44 @@ let _listenTimer = null;
 let _transcript = ''; // accumulates model's spoken text for chat bubble
 let _inputTranscript = ''; // accumulates child's speech for chat bubble
 let _lastUserTurn = '';
+let _speechDebugEntries = [];
+
+function _speechDebugTime() {
+  const d = new Date();
+  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
+
+function _speechDebugText(text) {
+  return String(text || '').replace(/\s+/g, ' ').trim();
+}
+
+function _renderSpeechDebug() {
+  const nowEl = document.getElementById('speech-debug-now');
+  const listEl = document.getElementById('speech-debug-list');
+  if (!nowEl || !listEl) return;
+  if (!_speechDebugEntries.length) {
+    nowEl.textContent = 'Waiting for Ollie to speak...';
+    listEl.innerHTML = '';
+    return;
+  }
+  nowEl.textContent = _speechDebugEntries[0].text;
+  listEl.innerHTML = _speechDebugEntries.map(entry =>
+    `<div class="speech-debug-item"><div class="speech-debug-meta">${esc(entry.source)}<br>${esc(entry.time)}</div><div class="speech-debug-text">${esc(entry.text)}</div></div>`
+  ).join('');
+}
+
+function _recordSpeechDebug(source, text) {
+  const clean = _speechDebugText(text);
+  if (!clean) return;
+  _speechDebugEntries.unshift({ source: source || 'Speech', text: clean, time: _speechDebugTime() });
+  if (_speechDebugEntries.length > 8) _speechDebugEntries = _speechDebugEntries.slice(0, 8);
+  _renderSpeechDebug();
+}
+
+function clearSpeechDebug() {
+  _speechDebugEntries = [];
+  _renderSpeechDebug();
+}
 
 function getAudioCtx() {
   if (!_audioCtx) _audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 24000 });
@@ -22,12 +60,12 @@ function getAudioCtx() {
 
 /* ══ GET WEBSOCKET URL (API key stays server-side) ══ */
 async function _getLiveUrl() {
-  console.warn('[KiddoAI] _getLiveUrl: fetching from ' + window.AI_PROXY + '/ai/live-token');
+  console.warn('[Ollie] _getLiveUrl: fetching from ' + window.AI_PROXY + '/ai/live-token');
   const r = await fetch(window.AI_PROXY + '/ai/live-token', {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}'
   });
   const d = await r.json();
-  console.warn('[KiddoAI] _getLiveUrl: status=' + r.status + ' hasUrl=' + !!d.url);
+  console.warn('[Ollie] _getLiveUrl: status=' + r.status + ' hasUrl=' + !!d.url);
   if (!r.ok || !d.url) throw new Error(d.error || 'No WebSocket URL');
   return d.url;
 }
@@ -42,7 +80,7 @@ async function _connectLive() {
     const timeout = setTimeout(() => { ws.close(); reject(new Error('Setup timeout')); }, 8000);
 
     ws.onopen = () => {
-      console.warn('[KiddoAI] WebSocket OPEN, sending setup...');
+      console.warn('[Ollie] WebSocket OPEN, sending setup...');
       ws.send(JSON.stringify({
         setup: {
           model: LIVE_MODELS[_liveModelIdx],
@@ -56,11 +94,17 @@ async function _connectLive() {
           inputAudioTranscription: {},
           outputAudioTranscription: {},
           realtimeInputConfig: {
+            // 60s silence floor before VAD ends the child's turn. The child
+            // must always be allowed to think/pause without being cut off,
+            // so end-of-speech sensitivity is set to LOW. activityHandling
+            // stays at START_OF_ACTIVITY_INTERRUPTS — that lets the CHILD
+            // interrupt Ollie (desired), it does not let Ollie interrupt
+            // the child.
             automaticActivityDetection: {
               disabled: false,
               startOfSpeechSensitivity: 'START_SENSITIVITY_HIGH',
-              endOfSpeechSensitivity: 'END_SENSITIVITY_HIGH',
-              silenceDurationMs: 1500,
+              endOfSpeechSensitivity: 'END_SENSITIVITY_LOW',
+              silenceDurationMs: 60000,
               prefixPaddingMs: 300
             },
             activityHandling: 'START_OF_ACTIVITY_INTERRUPTS'
@@ -78,7 +122,7 @@ async function _connectLive() {
       try {
         const msg = JSON.parse(text);
         if (msg.setupComplete) {
-          console.warn('[KiddoAI] setupComplete received!');
+          console.warn('[Ollie] setupComplete received!');
           clearTimeout(timeout);
           _ws = ws;
           ws.onmessage = _handleServerMsg;
@@ -87,7 +131,7 @@ async function _connectLive() {
             // Surface the close code + reason so we can tell intentional server-side
             // session ends from protocol/contract failures (e.g. realtime input
             // schema rejected). Without this, reconnect loops are invisible.
-            console.warn('[KiddoAI] live-ws closed code=' + cev.code + ' reason="' + (cev.reason || '') + '" wasClean=' + cev.wasClean);
+            console.warn('[Ollie] live-ws closed code=' + cev.code + ' reason="' + (cev.reason || '') + '" wasClean=' + cev.wasClean);
             _ws = null;
             if (_conversing) {
               setTimeout(() => { if (_conversing) _connectLive().then(_startMicStream).catch(() => {}); }, 1000);
@@ -155,6 +199,7 @@ async function _handleServerMsg(ev) {
       try { const parsed = JSON.parse(displayText); if (parsed.message) displayText = parsed.message; } catch (_e) { /* not JSON, use as-is */ }
       rememberConversationTurn('assistant', displayText);
       addBub('ai', displayText, { lessonType: 'Teaching' });
+      _recordSpeechDebug('Learn reply', displayText);
       recordLearnActivity(_detectSubject(displayText), _lastUserTurn);
       _lastUserTurn = '';
     }
@@ -223,10 +268,10 @@ function _stopPlayback() {
 async function _requestMicPermission() {
   // On Android Capacitor, request RECORD_AUDIO via our custom requestMic method
   if (window.IS_ANDROID && window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.SpeechPlugin) {
-    console.warn('[KiddoAI] Requesting mic permission via SpeechPlugin.requestMic...');
+    console.warn('[Ollie] Requesting mic permission via SpeechPlugin.requestMic...');
     const result = await window.Capacitor.Plugins.SpeechPlugin.requestMic({});
     if (!result || !result.granted) throw new Error('Microphone permission denied');
-    console.warn('[KiddoAI] Mic permission granted!');
+    console.warn('[Ollie] Mic permission granted!');
   }
 }
 
@@ -303,16 +348,16 @@ function _disconnectLive() {
 
 // Connect WebSocket only (no mic) — used on app startup for Ollie's greeting
 async function connectLive() {
-  console.warn('[KiddoAI] connectLive: starting...');
+  console.warn('[Ollie] connectLive: starting...');
   for (let mi = 0; mi < LIVE_MODELS.length; mi++) {
     _liveModelIdx = mi;
     try {
-      console.warn('[KiddoAI] connectLive: trying model ' + LIVE_MODELS[mi]);
+      console.warn('[Ollie] connectLive: trying model ' + LIVE_MODELS[mi]);
       await _connectLive();
-      console.warn('[KiddoAI] connectLive: SUCCESS with ' + LIVE_MODELS[mi]);
+      console.warn('[Ollie] connectLive: SUCCESS with ' + LIVE_MODELS[mi]);
       return; // connected
     } catch (e) {
-      console.error('[KiddoAI] connectLive: FAILED ' + LIVE_MODELS[mi] + ': ' + e.message);
+      console.error('[Ollie] connectLive: FAILED ' + LIVE_MODELS[mi] + ': ' + e.message);
       reportError('live', e.message, 'connectOnly model=' + LIVE_MODELS[mi]);
       _disconnectLive();
     }
@@ -320,13 +365,19 @@ async function connectLive() {
   throw new Error('All Live API models failed to connect');
 }
 
-// Reset listen timer — called on every activity so conversation stays alive during back-and-forth
+// Reset listen timer — called on every activity so conversation stays alive
+// during back-and-forth. Default window is 60s (the child's full speak slot).
+// When activity is detected the visible countdown also resets so the ring
+// drains from 60 again, keeping the on-screen number aligned with the
+// hard-max disconnect timer.
 function _resetListenTimer() {
   if (!_conversing) return;
   clearTimeout(_listenTimer);
+  const seconds = (S.listenWait || 60);
   _listenTimer = setTimeout(() => {
     if (_conversing) { stopConversation(); document.getElementById('slbl').textContent = 'Tap 🎤 if you need anything!'; }
-  }, (S.listenWait || 30) * 1000);
+  }, seconds * 1000);
+  if (typeof Countdown !== 'undefined' && Countdown.isRunning()) Countdown.reset();
 }
 
 // Start/stop conversation (Learn tab mic button)
@@ -338,6 +389,9 @@ async function togLMic() {
 async function startConversation() {
   _conversing = true;
   micUI('lmic', true);
+  const stage = document.getElementById('lmic-stage');
+  if (stage) stage.classList.add('active');
+  document.body.classList.add('listening-mode');
   try {
     // Connect WebSocket if not already open
     if (!_ws || _ws.readyState !== WebSocket.OPEN) {
@@ -349,11 +403,18 @@ async function startConversation() {
     await _startMicStream();
     document.getElementById('slbl').textContent = 'Listening... tap 🎤 to stop';
     _resetListenTimer();
+    if (typeof Countdown !== 'undefined' && stage) {
+      Countdown.start({ seconds: (S.listenWait || 60), mountEl: stage, variant: 'learn',
+        onExpire: () => { if (_conversing) stopConversation(); } });
+    }
   } catch (e) {
     reportError('live', e.message, 'startConversation');
     const isPermission = e.message && (e.message.includes('Permission') || e.message.includes('NotAllowed') || e.message.includes('permission'));
     document.getElementById('slbl').textContent = isPermission ? 'Mic permission needed — tap 🎤 to retry' : 'Connection failed — tap 🎤 to retry';
     _conversing = false; micUI('lmic', false);
+    if (typeof Countdown !== 'undefined') Countdown.stop();
+    if (stage) stage.classList.remove('active');
+    document.body.classList.remove('listening-mode');
   }
 }
 
@@ -361,6 +422,10 @@ function stopConversation() {
   _conversing = false;
   clearTimeout(_listenTimer); _listenTimer = null;
   _stopMicStream();
+  if (typeof Countdown !== 'undefined') Countdown.stop();
+  const stage = document.getElementById('lmic-stage');
+  if (stage) stage.classList.remove('active');
+  document.body.classList.remove('listening-mode');
   // Do NOT stop playback — let Ollie finish speaking her current response
   // Do NOT close WebSocket — let turnComplete arrive so transcript gets flushed
   // Close WebSocket after 30s idle (enough time for Ollie to finish)
@@ -389,6 +454,7 @@ function sendLiveText(text, opts) {
 async function speak(txt) {
   // If Live API is connected, send as text and let model speak it
   if (_ws && _ws.readyState === WebSocket.OPEN) {
+    _recordSpeechDebug('Live exact', txt);
     _ws.send(JSON.stringify({
       clientContent: { turns: [{ role: 'user', parts: [{ text: 'Please say this exactly to the child: ' + txt }] }], turnComplete: true }
     }));
@@ -396,6 +462,7 @@ async function speak(txt) {
   }
   // Gemini REST TTS only — no robotic fallback
   const clean = txt.replace(/[*_~`#]/g, '').substring(0, 800);
+  _recordSpeechDebug('REST exact', clean);
   VIZ.start();
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
@@ -492,11 +559,13 @@ async function _fetchTTS(chunk) {
     } catch (netErr) { lastErr = 'network: ' + netErr.message; }
     if (attempt === 0) await new Promise(r => setTimeout(r, 500));
   }
-  console.warn('[KiddoAI] _fetchTTS failed: ' + lastErr + ' chunk="' + chunk.slice(0, 40) + '"');
+  console.warn('[Ollie] _fetchTTS failed: ' + lastErr + ' chunk="' + chunk.slice(0, 40) + '"');
   return null;
 }
 
-async function speakDirect(txt) {
+async function speakDirect(txt, opts) {
+  const slow = !!(opts && opts.slow);
+  const debugSource = (opts && opts.debugSource) || 'Direct TTS';
   const clean = txt.replace(/[*_~`#]/g, '').substring(0, 800);
   const rawSentences = clean.match(/[^.!?]+[.!?]+/g) || [clean];
   // Pre-split any over-budget sentences at commas so the 150-token TTS cap
@@ -509,30 +578,39 @@ async function speakDirect(txt) {
   // 7-char chunk returns in ~1.7s vs ~5s for a 26-char bundled chunk).
   // Subsequent chunks pipeline while chunk 0 plays, so the user doesn't feel
   // extra gaps from the split.
-  const _FIRST_CHUNK_FAST_BUDGET = 40;
+  // In slow mode (phonics), every syllable gets its own TTS call so each
+  // chunk's natural start/stop envelope separates the sounds for the child.
+  const _FIRST_CHUNK_FAST_BUDGET = slow ? 16 : 40;
   const chunks = [];
   let i = 0;
-  if (sentences.length > 1 && sentences[0].length <= _FIRST_CHUNK_FAST_BUDGET) {
-    chunks.push(sentences[0]); i = 1;
-  }
-  while (i < sentences.length) {
-    if (sentences[i].length > _TTS_CHUNK_CHAR_BUDGET || i + 1 >= sentences.length || (sentences[i].length + 1 + sentences[i + 1].length) > _TTS_CHUNK_CHAR_BUDGET) {
-      chunks.push(sentences[i]); i += 1;
-    } else {
-      chunks.push((sentences[i] + ' ' + sentences[i + 1]).trim()); i += 2;
+  if (slow) {
+    while (i < sentences.length) { chunks.push(sentences[i]); i += 1; }
+  } else {
+    if (sentences.length > 1 && sentences[0].length <= _FIRST_CHUNK_FAST_BUDGET) {
+      chunks.push(sentences[0]); i = 1;
+    }
+    while (i < sentences.length) {
+      if (sentences[i].length > _TTS_CHUNK_CHAR_BUDGET || i + 1 >= sentences.length || (sentences[i].length + 1 + sentences[i + 1].length) > _TTS_CHUNK_CHAR_BUDGET) {
+        chunks.push(sentences[i]); i += 1;
+      } else {
+        chunks.push((sentences[i] + ' ' + sentences[i + 1]).trim()); i += 2;
+      }
     }
   }
   if (!chunks.length) { VIZ.stop(); return; }
 
   VIZ.start();
+  chunks.forEach((chunk, idx) => _recordSpeechDebug(chunks.length > 1 ? `${debugSource} ${idx + 1}` : debugSource, chunk));
   // Pipeline: kick off first fetch before the loop; on each iteration
-  // prefetch the NEXT chunk while we await+play the CURRENT one.
+  // prefetch the NEXT chunk while we await+play the CURRENT one. A single
+  // failed chunk no longer aborts the whole utterance — we skip it and
+  // keep playing so the rest of the message still reaches the child.
   let inflight = _fetchTTS(chunks[0]);
   for (let idx = 0; idx < chunks.length; idx++) {
     const current = inflight;
     inflight = (idx + 1 < chunks.length) ? _fetchTTS(chunks[idx + 1]) : null;
     const audio = await current;
-    if (!audio) { console.warn('[KiddoAI] speakDirect aborting at chunk ' + idx); break; }
+    if (!audio) { console.warn('[Ollie] speakDirect skipping failed chunk ' + idx); continue; }
     await _playPCMChunk(audio);
   }
   VIZ.stop();
@@ -542,6 +620,8 @@ function stopAll() {
   _stopPlayback();
   VIZ.stop();
 }
+
+window.clearSpeechDebug = clearSpeechDebug;
 
 function micUI(id, on) {
   const b = document.getElementById(id); if (!b) return;
@@ -559,39 +639,145 @@ const NB = {
 };
 
 let _esr = null, _emic = false, _speechTarget = 'exercise';
+let _exTranscript = '', _exFinalized = false, _exRestarts = 0;
+const _EX_MAX_RESTARTS = 3;
+const _EX_TALK_SECONDS = 60;
+
+function _exCountdownStart(opts) {
+  if (typeof Countdown === 'undefined') return;
+  const stage = document.getElementById('exmic-stage');
+  if (!stage) return;
+  Countdown.start({
+    seconds: _EX_TALK_SECONDS,
+    mountEl: stage,
+    variant: 'exercise',
+    onExpire: () => { _finalizeEx(opts && opts.android); }
+  });
+}
+
+function _finalizeEx(isAndroid) {
+  if (_exFinalized) return;
+  _exFinalized = true;
+  const text = (_exTranscript || '').trim();
+  if (isAndroid) NB.call('stopListening');
+  stopEMic();
+  if (text) handleVoiceAns(text);
+  else document.getElementById('vatr').textContent = '';
+}
+
 function togExMic() {
-  if (_emic) { stopEMic(); return; }
+  if (_emic) { _finalizeEx(NB.ok); return; }
   _speechTarget = 'exercise';
-  if (NB.ok) { _emic = true; micUI('exmic', true); document.getElementById('vatr').textContent = '🎤 Listening...'; NB.call('startListening'); return; }
+  _exTranscript = ''; _exFinalized = false; _exRestarts = 0;
+  const stage = document.getElementById('exmic-stage');
+  if (stage) stage.classList.add('active');
+  document.body.classList.add('listening-mode');
+  if (NB.ok) {
+    _emic = true; micUI('exmic', true);
+    document.getElementById('vatr').textContent = '🎤 Listening...';
+    NB.call('startListening');
+    _exCountdownStart({ android: true });
+    return;
+  }
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SR) { document.getElementById('vatr').textContent = 'Speech not available'; return; }
-  _esr = new SR(); _esr.lang = 'en-US'; _esr.interimResults = true;
+  if (!SR) {
+    document.getElementById('vatr').textContent = 'Speech not available';
+    if (stage) stage.classList.remove('active');
+    document.body.classList.remove('listening-mode');
+    return;
+  }
   _emic = true; micUI('exmic', true);
   document.getElementById('vatr').textContent = '🎤 Listening...';
-  _esr.onresult = e => {
-    const t = Array.from(e.results).map(r => r[0].transcript).join('');
-    document.getElementById('vatr').textContent = t;
-    if (e.results[e.results.length - 1].isFinal) { stopEMic(); handleVoiceAns(t); }
-  };
-  _esr.onend = () => stopEMic(); _esr.onerror = () => { stopEMic(); document.getElementById('vatr').textContent = ''; };
-  _esr.start();
+  _exStartRecognizer(SR);
+  _exCountdownStart({ android: false });
 }
-function stopEMic() { if (_esr) _esr.stop(); _esr = null; _emic = false; micUI('exmic', false); }
+
+function _exStartRecognizer(SR) {
+  _esr = new SR();
+  _esr.lang = 'en-US';
+  _esr.interimResults = true;
+  _esr.continuous = true;
+  // Accumulate transcript across all results. Do NOT finalize on isFinal —
+  // the child gets the full 60s window and we stitch their utterances
+  // together. Finalization only happens on countdown expiry or manual stop.
+  _esr.onresult = e => {
+    let combined = '';
+    for (let i = 0; i < e.results.length; i++) combined += e.results[i][0].transcript;
+    _exTranscript = combined;
+    document.getElementById('vatr').textContent = combined;
+  };
+  // Some Android WebViews emit onend after ~30s of silence even with
+  // continuous=true. Restart up to 3 times so the child keeps their
+  // 60s window. Hard cap prevents runaway loops.
+  _esr.onend = () => {
+    if (_emic && !_exFinalized && _exRestarts < _EX_MAX_RESTARTS) {
+      _exRestarts += 1;
+      try { _esr.start(); } catch (_e) { _finalizeEx(false); }
+    }
+  };
+  _esr.onerror = () => { _finalizeEx(false); };
+  try { _esr.start(); } catch (_e) { _finalizeEx(false); }
+}
+
+function stopEMic() {
+  if (_esr) { try { _esr.stop(); } catch (_e) { /* recognizer already stopped */ } }
+  _esr = null;
+  _emic = false;
+  micUI('exmic', false);
+  if (typeof Countdown !== 'undefined') Countdown.stop();
+  const stage = document.getElementById('exmic-stage');
+  if (stage) stage.classList.remove('active');
+  document.body.classList.remove('listening-mode');
+}
 
 // Android speech callbacks
 function onAndroidSpeechResult(t) {
-  // Spell tab mic
+  // Spell tab mic — finalize/restart logic lives on window so ui.js owns it.
   if (window._spellMicActive) {
-    window._spellMicActive = false;
+    if (window._spellFinalized) return;
     const word = (t || '').trim();
-    if (word) { document.getElementById('spell-inp').value = word; spellWord(); }
+    if (word) window._spellTranscript = word;
+    const lblEl = document.getElementById('spell-listening');
+    if (lblEl) lblEl.textContent = '🎤 Heard: ' + (word || '');
+    if (window._spellMicOn && !window._spellFinalized && (window._spellRestarts || 0) < (window._SPELL_MAX_RESTARTS || 3)) {
+      window._spellRestarts = (window._spellRestarts || 0) + 1;
+      try { NB.call('startListening'); } catch (_e) { if (typeof window._finalizeSpell === 'function') window._finalizeSpell(true); }
+    } else if (typeof window._finalizeSpell === 'function') {
+      window._finalizeSpell(true);
+    }
     return;
   }
-  if (_speechTarget === 'exercise') { stopEMic(); document.getElementById('vatr').textContent = t; handleVoiceAns(t); }
+  if (_speechTarget === 'exercise') {
+    if (_exFinalized) return;
+    if (t) _exTranscript = t;
+    document.getElementById('vatr').textContent = t || '';
+    if (_emic && !_exFinalized && _exRestarts < _EX_MAX_RESTARTS) {
+      _exRestarts += 1;
+      try { NB.call('startListening'); } catch (_e) { _finalizeEx(true); }
+    } else {
+      _finalizeEx(true);
+    }
+  }
 }
 function onAndroidSpeechError(reason) {
   const msg = reason || "Couldn't hear you";
   reportError('speech', msg, _speechTarget);
-  if (window._spellMicActive) { window._spellMicActive = false; return; }
-  if (_speechTarget === 'exercise') { stopEMic(); document.getElementById('vatr').textContent = msg; }
+  if (window._spellMicActive) {
+    if (window._spellMicOn && !window._spellFinalized && (window._spellRestarts || 0) < (window._SPELL_MAX_RESTARTS || 3)) {
+      window._spellRestarts = (window._spellRestarts || 0) + 1;
+      try { NB.call('startListening'); } catch (_e) { if (typeof window._finalizeSpell === 'function') window._finalizeSpell(true); }
+      return;
+    }
+    if (typeof window._finalizeSpell === 'function') window._finalizeSpell(true);
+    return;
+  }
+  if (_speechTarget === 'exercise') {
+    if (_emic && !_exFinalized && _exRestarts < _EX_MAX_RESTARTS) {
+      _exRestarts += 1;
+      try { NB.call('startListening'); } catch (_e) { _finalizeEx(true); }
+      return;
+    }
+    document.getElementById('vatr').textContent = msg;
+    _finalizeEx(true);
+  }
 }

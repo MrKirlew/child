@@ -9,11 +9,11 @@
 
   <!-- ── REQUIRED: Microphone permission ── -->
   <key>NSMicrophoneUsageDescription</key>
-  <string>KiddoAI needs the microphone so your child can speak answers and use the wake word to activate Ollie the Owl!</string>
+  <string>Ollie needs the microphone so your child can speak answers and use the wake word to activate Ollie the Owl!</string>
 
   <!-- ── REQUIRED: Speech recognition permission ── -->
   <key>NSSpeechRecognitionUsageDescription</key>
-  <string>KiddoAI uses speech recognition so your child can speak their answers and have them checked by Ollie the Owl!</string>
+  <string>Ollie uses speech recognition so your child can speak their answers and have them checked by Ollie the Owl!</string>
 
   <!-- ── Audio background mode (optional: keeps TTS alive when screen dims) ── -->
   <key>UIBackgroundModes</key>

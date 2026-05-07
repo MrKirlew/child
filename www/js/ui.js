@@ -1,5 +1,5 @@
 /* ══ UI ══ */
-/* globals: S, SUBS, SCOL, saveS, updProg, updScoreBar, addBub, speak, speakDirect, VIZ, hashPin, esc, sendLiveText, connectLive, sendL, aiGenerate, checkBadges */
+/* globals: S, SUBS, SCOL, saveS, updProg, updScoreBar, addBub, speak, speakDirect, VIZ, hashPin, esc, sendLiveText, connectLive, sendL, aiGenerate, checkBadges, SpellTools */
 
 function showTab(t) { ['learn', 'ex', 'spell', 'prog'].forEach(id => { document.getElementById('tab-' + id).classList.toggle('on', id === t); document.getElementById('tb-' + id).classList.toggle('on', id === t); }); if (t === 'prog') updProg(); }
 function setMode(m) { S.mode = m; saveS(); document.body.className = (m === 'normal' || m === 'excited') ? '' : 'mode-' + m; document.querySelectorAll('[data-mode]').forEach(e => e.classList.toggle('on', e.dataset.mode === m)); }
@@ -24,7 +24,7 @@ function openDash() {
   document.getElementById('d-stats').innerHTML = tokenWarn + `<div class="sc2"><div class="sn2">${tot}</div><div class="sl2">Exercises</div></div><div class="sc2"><div class="sn2">${S.earnedBadges.length}</div><div class="sl2">Badges</div></div><div class="sc2"><div class="sn2">${S.bestStreak}</div><div class="sl2">Best Streak</div></div><div class="sc2"><div class="sn2">Gr.${S.grade}</div><div class="sl2">Grade</div></div>`;
   document.querySelectorAll('#mpr [data-mode]').forEach(e => e.classList.toggle('on', e.dataset.mode === (S.mode || 'normal')));
   document.querySelectorAll('#dpr [data-d]').forEach(e => e.classList.toggle('on', e.dataset.d === S.diff));
-  document.querySelectorAll('#lwr [data-lw]').forEach(e => e.classList.toggle('on', parseInt(e.dataset.lw, 10) === (S.listenWait || 30)));
+  document.querySelectorAll('#lwr [data-lw]').forEach(e => e.classList.toggle('on', parseInt(e.dataset.lw, 10) === (S.listenWait || 60)));
   const mx = Math.max(...Object.values(S.ex).map(e => e.t), 1);
   document.getElementById('d-bars').innerHTML = SUBS.map(sub => { const d = S.ex[sub] || { c: 0, t: 0 }; return `<div class="brc"><div class="brn">${sub}</div><div class="brt"><div class="brf" style="width:${Math.round(d.t / mx * 100)}%;background:${SCOL[sub]}"></div></div><div class="brv">${d.t}</div></div>`; }).join('');
   document.getElementById('ov-dash').classList.add('open');
@@ -45,6 +45,12 @@ async function sendTyped() {
   const txt = inp.value.trim();
   if (!txt) return;
   inp.value = '';
+  // Typed spelling requests should use the deterministic spell flow even when
+  // the Learn websocket is already warm.
+  if (SpellTools.extractSpellTarget(txt)) {
+    sendL(txt);
+    return;
+  }
   // Send through Live API if connected, otherwise REST fallback
   if (sendLiveText(txt, { userVisibleText: txt })) return;
   // REST fallback
@@ -56,159 +62,328 @@ let _spellHistory = [];
 (function _loadSpellHistory() { try { _spellHistory = JSON.parse(localStorage.getItem('kai5_spell') || '[]'); } catch (_e) { _spellHistory = []; } })();
 function _saveSpellHistory() { try { localStorage.setItem('kai5_spell', JSON.stringify(_spellHistory.slice(0, 20))); } catch (_e) { /* quota */ } }
 
-// IPA-style phonics like `lad-der: l-a-d (LAD) - d-er (DER)` make the TTS
-// model abort with http-400 ("Model tried to generate text, but it should
-// only be used for TTS"). Strip parenthetical IPA brackets, turn dashes
-// and colons between sounds into period-separated syllables. Result reads
-// naturally and stops triggering the model's text-generation interpretation.
-function _phonicsToSpeech(p) {
-  if (!p) return '';
-  return String(p)
-    .replace(/\([^)]*\)/g, '')
-    .replace(/\s*-\s*/g, '. ')
-    .replace(/:/g, '.')
-    .replace(/\s+/g, ' ')
-    .replace(/\.+/g, '.')
-    .trim();
+// Generation counter — incremented every time a new spell ceremony starts.
+// A running ceremony captures its own generation; if a newer one starts,
+// the older one bails on its next await tick. Prevents a double-tap from
+// queueing two overlapping audio sequences.
+let _spellSpeechGen = 0;
+
+// Letter NAMES (polysyllabic English pronunciations) for the spell phase.
+// Sending raw single letters to TTS — even comma-separated — causes the
+// engine to collapse them back into the spelled word ("L, A, D, D, E, R."
+// came out as "ladder"). Letter names like "ell" and "dee" can't be
+// merged that way, so the child actually hears the spelling.
+// Comma separators still let adjacent names bleed into English ("bee,
+// you" → "beauty"; "ee, ar" → "ear"), so the ceremony joins names with
+// periods inside a single TTS call. Gemini treats each period-terminated
+// name as its own utterance and inserts ~600ms of silence between them
+// — measured at 10 silence gaps for a 9-letter word — which separates
+// the letters without the per-letter HTTP fetch pulsing that slow:true
+// produces.
+const _LETTER_NAMES = {
+  a: 'ay', b: 'bee', c: 'see', d: 'dee', e: 'ee', f: 'eff', g: 'jee',
+  h: 'aitch', i: 'eye', j: 'jay', k: 'kay', l: 'ell', m: 'em', n: 'en',
+  o: 'oh', p: 'pee', q: 'cue', r: 'ar', s: 'ess', t: 'tee', u: 'you',
+  v: 'vee', w: 'double you', x: 'ex', y: 'why', z: 'zee'
+};
+
+async function lookupSpellWord(inputWord) {
+  const word = SpellTools.cleanSpellWord(inputWord);
+  if (!word) throw new Error('Invalid spell word');
+  const grade = S.grade === 'K' ? 'kindergartner' : 'grade ' + S.grade + ' student';
+  const prompt = `The child wants to learn how to spell the word "${word}". Return ONLY JSON: {"word":"${word}","letters":["c","a","t"],"meaning":"A short kid-friendly definition for the exact word ${word}. Do not misspell or rename the word. Do not start the definition with '${word} is' or '${word} means'."}`;
+  const raw = await aiGenerate(prompt, '', 200);
+  return SpellTools.parseSpellLookup(raw, word);
+}
+
+// Pre-recorded letter-name clips live at audio/letters/{a..z}.wav — one
+// file per letter, generated with Google Translate TTS (gTTS) and
+// Gemini-multimodal-verified. Playing static files removes TTS from the
+// spelling loop entirely: zero possibility of phonetic merging
+// ("bee, you" → "beauty"), zero network dependency, zero prompt-engineer
+// gambling. The Kore voice still speaks the whole word + meaning; only
+// the letter-recital uses these clips.
+function _playLetterClip(letter) {
+  return new Promise((resolve) => {
+    const ch = String(letter || '').toLowerCase();
+    if (!/^[a-z]$/.test(ch)) { resolve(false); return; }
+    const a = new Audio('audio/letters/' + ch + '.wav');
+    let done = false;
+    const finish = (ok) => { if (done) return; done = true; resolve(ok); };
+    a.onended = () => finish(true);
+    a.onerror = () => finish(false);
+    // Safety net: a 4s watchdog in case the element never fires end (each
+    // clip is <1.1s, so 4s is very generous and prevents wedging on an
+    // unexpected playback error).
+    setTimeout(() => finish(true), 4000);
+    try { const p = a.play(); if (p && typeof p.then === 'function') p.catch(() => finish(false)); }
+    catch (_e) { finish(false); }
+  });
+}
+
+async function _playLetterClips(canonicalLetters, alive) {
+  let anyPlayed = false;
+  for (const letter of canonicalLetters) {
+    if (!alive()) return anyPlayed;
+    const ok = await _playLetterClip(letter);
+    if (ok) { anyPlayed = true; await new Promise(r => setTimeout(r, 120)); }
+    else {
+      // Single clip failed to load — break and let caller fall back to
+      // Gemini TTS for the remainder. Keeps spelling working even on a
+      // partially corrupt asset bundle.
+      return anyPlayed;
+    }
+  }
+  return anyPlayed;
+}
+
+// Spell ceremony — minimal, deterministic, three steps:
+//   1. SPELL the word — static pre-recorded letter clips (gTTS voice,
+//      Google-verified). Falls back to Gemini TTS if clips unavailable.
+//   2. SAY the word once at normal cadence (Gemini, Kore voice).
+//   3. DEFINE: speak the brief meaning (Gemini, Kore voice).
+// Calling this also stops any in-flight audio so a re-tap always starts fresh.
+async function runSpellCeremony(word, letters, meaningPromise) {
+  try { stopAll(); } catch (_e) { /* noop */ }
+  const myGen = ++_spellSpeechGen;
+  const alive = () => myGen === _spellSpeechGen;
+  const canonicalLetters = Array.isArray(letters) && letters.length
+    ? letters.map(letter => String(letter || '').toLowerCase()).filter(Boolean)
+    : String(word).toLowerCase().split('').filter(Boolean);
+  const names = canonicalLetters.map(ch => _LETTER_NAMES[ch]).filter(Boolean);
+  if (canonicalLetters.length) {
+    const playedAll = await _playLetterClips(canonicalLetters, alive);
+    // If clip playback started but didn't finish the whole word (a clip
+    // was missing mid-way), let the user at least hear SOMETHING for the
+    // remaining letters via Gemini TTS. If nothing played at all, assume
+    // the static bundle is missing entirely and fall back in full.
+    if (!playedAll && names.length && alive()) {
+      await speakDirect(names.join('. ') + '.', { debugSource: 'Spell letters (fallback)' });
+    }
+    if (!alive()) return;
+    await new Promise(r => setTimeout(r, 250));
+  }
+  if (!alive()) return;
+  await speakDirect(word, { debugSource: 'Spell word' });
+  let meaning = '';
+  if (meaningPromise) {
+    try { meaning = await meaningPromise; } catch (_e) { meaning = ''; }
+  }
+  if (meaning && alive()) {
+    await new Promise(r => setTimeout(r, 250));
+    if (!alive()) return;
+    await speakDirect('It means: ' + meaning, { debugSource: 'Spell meaning' });
+  }
 }
 
 async function spellWord() {
   const inp = document.getElementById('spell-inp');
-  const word = inp.value.trim().toLowerCase();
+  const word = SpellTools.cleanSpellWord(inp.value);
   if (!word) return;
   inp.value = '';
   const btn = document.getElementById('spell-btn'); btn.disabled = true;
+  document.getElementById('spell-load').textContent = 'Ollie is saying it...';
   document.getElementById('spell-load').style.display = 'block';
   document.getElementById('spell-result').style.display = 'none';
-
-  // Kick off the "word + letters + That's word" TTS immediately, in parallel
-  // with the AI call. Child hears audio within ~1s, not 3–4s. Everything in
-  // this initial clip is derivable from the word alone — no AI needed.
-  const initialLetters = word.split('').join(', ');
-  const initialSpeechPromise = speakDirect(`${word}. ${initialLetters}. That's ${word}.`);
+  try { stopAll(); } catch (_e) { /* noop */ }
 
   try {
-    const grade = S.grade === 'K' ? 'kindergartner' : 'grade ' + S.grade + ' student';
-    const prompt = `The child wants to learn the word "${word}". Return ONLY JSON: {"word":"${word}","letters":["c","a","t"],"meaning":"A short kid-friendly definition (1 sentence for a ${grade}).","phonics":"Break the word into syllables a child can hear out loud. Use periods between sounds, no parentheses, no IPA brackets, no colons. Example for cat: 'kuh. ah. tuh.' Example for ladder: 'lad. der.'"}`;
-    const raw = await aiGenerate(prompt, '', 250);
-    let result;
-    try { result = JSON.parse(raw.replace(/```json|```/g, '').trim()); } catch (_e) { result = { word: word, letters: word.split(''), meaning: 'A great word to learn!', phonics: '' }; }
-    _showSpellResult(result, word);
-    // Save to history + badge count now that we have the full result.
-    _spellHistory.unshift({ word: result.word || word, letters: result.letters || word.split(''), meaning: result.meaning || '', phonics: result.phonics || '' });
+    const baseResult = SpellTools.buildSpellResult(word, '');
+    _showSpellResult(baseResult, word, { pendingMeaning: true });
+    const resultPromise = lookupSpellWord(word).catch((err) => {
+      console.error('[Ollie] lookupSpellWord error:', err.message);
+      return SpellTools.buildSpellResult(word, '');
+    });
+    const meaningPromise = resultPromise.then(result => {
+      _showSpellResult(result, word);
+      return result.meaning;
+    });
+    await runSpellCeremony(baseResult.word, baseResult.letters, meaningPromise);
+    const result = await resultPromise;
+    _spellHistory.unshift({ word: result.word || word, letters: result.letters || word.split(''), meaning: result.meaning || '' });
     if (_spellHistory.length > 20) _spellHistory.pop();
     _saveSpellHistory(); _renderSpellHistory();
     S.cnt.Spelling = (S.cnt.Spelling || 0) + 1; saveS(); checkBadges();
-    // Wait for the initial speech to finish, then speak phonics + meaning
-    // as a natural continuation. If the tail is empty (AI failed, no phonics
-    // and no meaning), we silently skip — the initial speech already
-    // delivered the core spelling ceremony.
-    await initialSpeechPromise;
-    const parts = [];
-    const safePhonics = _phonicsToSpeech(result.phonics);
-    if (safePhonics) parts.push(safePhonics + '.');
-    if (result.meaning) parts.push('It means: ' + result.meaning);
-    if (parts.length) speakDirect(parts.join(' '));
   } catch (e) {
-    console.error('[KiddoAI] spellWord error:', e.message);
+    console.error('[Ollie] spellWord error:', e.message);
     document.getElementById('spell-meaning').textContent = 'Oops! Could not look up that word. Try again!';
-    document.getElementById('spell-phonics').textContent = '';
     document.getElementById('spell-result').style.display = 'block';
   }
   document.getElementById('spell-load').style.display = 'none';
   btn.disabled = false;
 }
 
-function _showSpellResult(result, fallbackWord) {
+function _showSpellResult(result, fallbackWord, opts) {
   const word = result.word || fallbackWord;
   document.getElementById('spell-word').textContent = word;
   document.getElementById('spell-letters').innerHTML = (result.letters || word.split('')).map(l => `<div class="sp-letter">${esc(l)}</div>`).join('');
-  document.getElementById('spell-meaning').innerHTML = '<strong>📖 Meaning:</strong> ' + esc(result.meaning || '');
-  document.getElementById('spell-phonics').innerHTML = (result.phonics) ? '<strong>🔤 How to say it:</strong> ' + esc(result.phonics) : '';
-  document.getElementById('spell-phonics').style.display = result.phonics ? 'block' : 'none';
+  const pendingMeaning = opts && opts.pendingMeaning;
+  document.getElementById('spell-meaning').innerHTML = pendingMeaning
+    ? '<strong>📖 Meaning:</strong> Ollie is finding the meaning...'
+    : '<strong>📖 Meaning:</strong> ' + esc(result.meaning || '');
+  // Phonics row is no longer shown — the spell ceremony is intentionally
+  // limited to spell + say + define. Hide unconditionally so any old
+  // history entry that still has a phonics field doesn't render it.
+  const ph = document.getElementById('spell-phonics');
+  if (ph) { ph.innerHTML = ''; ph.style.display = 'none'; }
   document.getElementById('spell-result').style.display = 'block';
 }
 
-function showSpellResult(idx) {
+async function showSpellResult(idx) {
   if (idx < 0 || idx >= _spellHistory.length) return;
   const h = _spellHistory[idx];
   document.getElementById('spell-inp').value = '';
   _showSpellResult(h, h.word);
-  const letters = (h.letters || h.word.split('')).join(', ');
-  const safePhonics = _phonicsToSpeech(h.phonics);
-  const phonicsLine = safePhonics ? ` ${safePhonics}.` : '';
-  const meaningLine = h.meaning ? ` It means: ${h.meaning}` : '';
-  speakDirect(`${h.word}. ${letters}. That's ${h.word}.${phonicsLine}${meaningLine}`);
+  await runSpellCeremony(h.word, h.letters, Promise.resolve(h.meaning));
 }
 
-// Lightweight replay — tapped from the 🔊 icon on a history tile.
-// Speaks word + pronunciation + brief meaning from cached data. Does not
-// re-render the detail view above.
-function sayItAgain(idx) {
+// Lightweight replay — tapped from the 🔊 icon on a history tile. Same
+// minimal ceremony: spell, say, define.
+async function sayItAgain(idx) {
   if (idx < 0 || idx >= _spellHistory.length) return;
   const h = _spellHistory[idx];
-  const safePhonics = _phonicsToSpeech(h.phonics);
-  const phonicsLine = safePhonics ? ` ${safePhonics}.` : '';
-  const meaningLine = h.meaning ? ` It means: ${h.meaning}` : '';
-  speakDirect(`${h.word}.${phonicsLine}${meaningLine}`);
+  await runSpellCeremony(h.word, h.letters, Promise.resolve(h.meaning));
 }
 
-/* ══ SPELL MIC — say a word out loud ══ */
-let _spellSR = null, _spellMicOn = false;
+/* ══ SPELL MIC — say a word out loud ══
+ * Holds the mic open for the full 60-second talk window. Accumulates the
+ * recognizer transcript; only finalizes on countdown expiry, manual tap-stop,
+ * or fatal recognizer error. State lives on `window` so speech.js's Android
+ * callbacks can reach it without cross-script `let` issues.
+ */
+let _spellSR = null;
+window._spellMicOn = false;
+window._spellTranscript = '';
+window._spellFinalized = false;
+window._spellRestarts = 0;
+window._SPELL_MAX_RESTARTS = 3;
+const _SPELL_TALK_SECONDS = 60;
+
+function _spellCountdownStart(isAndroid) {
+  if (typeof Countdown === 'undefined') return;
+  const stage = document.getElementById('spell-mic-stage');
+  if (!stage) return;
+  Countdown.start({
+    seconds: _SPELL_TALK_SECONDS,
+    mountEl: stage,
+    variant: 'spell',
+    onExpire: () => { window._finalizeSpell(isAndroid); }
+  });
+}
+
+window._finalizeSpell = function (isAndroid) {
+  if (window._spellFinalized) return;
+  window._spellFinalized = true;
+  const word = (window._spellTranscript || '').trim();
+  if (isAndroid) NB.call('stopListening');
+  window._spellMicActive = false;
+  _stopSpellMic();
+  if (word) {
+    document.getElementById('spell-inp').value = word;
+    spellWord();
+  }
+};
+
 function togSpellMic() {
-  if (_spellMicOn) { _stopSpellMic(); return; }
+  if (window._spellMicOn) { window._finalizeSpell(NB.ok); return; }
+  window._spellTranscript = '';
+  window._spellFinalized = false;
+  window._spellRestarts = 0;
+  const stage = document.getElementById('spell-mic-stage');
+  if (stage) stage.classList.add('active');
+  document.body.classList.add('listening-mode');
   // Android native
   if (NB.ok) {
-    _spellMicOn = true;
+    window._spellMicOn = true;
     document.getElementById('spell-mic').textContent = '⏹';
     document.getElementById('spell-listening').style.display = 'block';
+    document.getElementById('spell-listening').textContent = '🎤 Listening...';
     window._spellMicActive = true;
     NB.call('startListening');
+    _spellCountdownStart(true);
     return;
   }
   // Web Speech API fallback
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SR) { document.getElementById('spell-listening').textContent = 'Speech not available on this device'; document.getElementById('spell-listening').style.display = 'block'; return; }
-  _spellSR = new SR(); _spellSR.lang = 'en-US'; _spellSR.interimResults = true;
-  _spellMicOn = true;
+  if (!SR) {
+    document.getElementById('spell-listening').textContent = 'Speech not available on this device';
+    document.getElementById('spell-listening').style.display = 'block';
+    if (stage) stage.classList.remove('active');
+    document.body.classList.remove('listening-mode');
+    return;
+  }
+  _spellSR = new SR();
+  _spellSR.lang = 'en-US';
+  _spellSR.interimResults = true;
+  _spellSR.continuous = true;
+  window._spellMicOn = true;
   document.getElementById('spell-mic').textContent = '⏹';
   document.getElementById('spell-listening').style.display = 'block';
+  document.getElementById('spell-listening').textContent = '🎤 Listening...';
   _spellSR.onresult = e => {
-    const t = Array.from(e.results).map(r => r[0].transcript).join('');
-    document.getElementById('spell-listening').textContent = '🎤 Heard: ' + t;
-    if (e.results[e.results.length - 1].isFinal) {
-      _stopSpellMic();
-      const word = t.trim();
-      if (word) { document.getElementById('spell-inp').value = word; spellWord(); }
+    let combined = '';
+    for (let i = 0; i < e.results.length; i++) combined += e.results[i][0].transcript;
+    window._spellTranscript = combined;
+    document.getElementById('spell-listening').textContent = '🎤 Heard: ' + combined;
+  };
+  _spellSR.onend = () => {
+    if (window._spellMicOn && !window._spellFinalized && window._spellRestarts < window._SPELL_MAX_RESTARTS) {
+      window._spellRestarts += 1;
+      try { _spellSR.start(); } catch (_e) { window._finalizeSpell(false); }
     }
   };
-  _spellSR.onend = () => _stopSpellMic();
-  _spellSR.onerror = () => { _stopSpellMic(); document.getElementById('spell-listening').textContent = ''; };
-  _spellSR.start();
+  _spellSR.onerror = () => { window._finalizeSpell(false); };
+  try { _spellSR.start(); } catch (_e) { window._finalizeSpell(false); }
+  _spellCountdownStart(false);
 }
+
 function _stopSpellMic() {
-  if (_spellSR) _spellSR.stop(); _spellSR = null;
-  _spellMicOn = false;
+  if (_spellSR) { try { _spellSR.stop(); } catch (_e) { /* recognizer already stopped */ } }
+  _spellSR = null;
+  window._spellMicOn = false;
   window._spellMicActive = false;
   document.getElementById('spell-mic').textContent = '🎤';
   document.getElementById('spell-listening').style.display = 'none';
+  if (typeof Countdown !== 'undefined') Countdown.stop();
+  const stage = document.getElementById('spell-mic-stage');
+  if (stage) stage.classList.remove('active');
+  document.body.classList.remove('listening-mode');
+}
+
+function _deleteSpellWord(idx) {
+  if (idx < 0 || idx >= _spellHistory.length) return;
+  const word = _spellHistory[idx].word || '';
+  if (!window.confirm(`Delete "${word}" from your word list?`)) return;
+  _spellHistory.splice(idx, 1);
+  _saveSpellHistory();
+  _renderSpellHistory();
+}
+
+function _clearSpellHistory() {
+  if (!_spellHistory.length) return;
+  if (!window.confirm(`Delete ALL ${_spellHistory.length} word${_spellHistory.length === 1 ? '' : 's'} from your word list? This cannot be undone.`)) return;
+  _spellHistory = [];
+  _saveSpellHistory();
+  _renderSpellHistory();
 }
 
 function _renderSpellHistory() {
   const el = document.getElementById('spell-history');
   if (!_spellHistory.length) { el.innerHTML = '<p style="color:var(--muted);font-size:12px;padding:6px 0">Type a word above to get started!</p>'; return; }
-  el.innerHTML = _spellHistory.map((h, i) => `<div class="sp-hist"><div class="sp-hist-body" data-sp-action="show" data-sp-idx="${i}" role="button" tabindex="0"><div class="sp-hw">${esc(h.word)}</div><div class="sp-hm">${esc(h.meaning)}</div></div><button type="button" class="sp-hist-play" data-sp-action="say" data-sp-idx="${i}" aria-label="Say ${esc(h.word)} again">🔊</button></div>`).join('');
-  // Delegated click listener — attached once, survives re-renders. Cleaner
-  // than inline onclick per tile (no string-eval inside attributes, easier
-  // to extend with keyboard activation, single source of truth for actions).
+  const tiles = _spellHistory.map((h, i) => `<div class="sp-hist"><div class="sp-hist-body" data-sp-action="show" data-sp-idx="${i}" role="button" tabindex="0"><div class="sp-hw">${esc(h.word)}</div><div class="sp-hm">${esc(h.meaning)}</div></div><button type="button" class="sp-hist-play" data-sp-action="say" data-sp-idx="${i}" aria-label="Say ${esc(h.word)} again">🔊</button><button type="button" class="sp-hist-del" data-sp-action="delete" data-sp-idx="${i}" aria-label="Delete ${esc(h.word)}">✕</button></div>`).join('');
+  const clearBtn = `<button type="button" class="sp-hist-clear" data-sp-action="clear-all" aria-label="Delete all words">🗑 Clear all</button>`;
+  el.innerHTML = tiles + clearBtn;
+  // Delegated click listener — attached once, survives re-renders.
   if (!el._delegateInstalled) {
     el.addEventListener('click', (ev) => {
       const trg = ev.target.closest('[data-sp-action]');
       if (!trg) return;
+      const action = trg.getAttribute('data-sp-action');
+      if (action === 'clear-all') { ev.stopPropagation(); _clearSpellHistory(); return; }
       const idx = parseInt(trg.getAttribute('data-sp-idx'), 10);
       if (isNaN(idx)) return;
-      const action = trg.getAttribute('data-sp-action');
       if (action === 'say') { ev.stopPropagation(); sayItAgain(idx); }
+      else if (action === 'delete') { ev.stopPropagation(); _deleteSpellWord(idx); }
       else if (action === 'show') { showSpellResult(idx); }
     });
     el._delegateInstalled = true;

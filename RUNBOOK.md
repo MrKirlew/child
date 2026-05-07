@@ -1,4 +1,4 @@
-# Runbook — Ollie / KiddoAI
+# Runbook — Ollie
 
 Operational reference for diagnosing production issues. The 99% uptime SLO is unmaintainable without it.
 

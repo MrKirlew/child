@@ -1,4 +1,4 @@
-package com.kiddoai.tutor;
+package com.ollieapp.tutor;
 
 import android.Manifest;
 import android.content.Intent;
@@ -33,7 +33,7 @@ import java.util.Locale;
 )
 public class SpeechPlugin extends Plugin {
 
-    private static final String TAG = "KiddoAI";
+    private static final String TAG = "Ollie";
     private TextToSpeech tts;
     private SpeechRecognizer recognizer;
     private Handler mainHandler;
@@ -53,7 +53,7 @@ public class SpeechPlugin extends Plugin {
         });
 
         mainHandler.postDelayed(() -> {
-            evalJS("window.IS_ANDROID=true;console.log('[KiddoAI] SpeechPlugin ready');");
+            evalJS("window.IS_ANDROID=true;console.log('[Ollie] SpeechPlugin ready');");
         }, 300);
     }
 

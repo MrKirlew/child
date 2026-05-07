@@ -5,14 +5,24 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-<title>KiddoAI Tutor</title>
+<meta name="theme-color" content="#7C3AED"/>
+<title>Ollie — STEAM Reading Buddy</title>
+<link rel="manifest" href="manifest.json"/>
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png"/>
 <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="css/main.css"/>
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js').catch((e) => console.warn('[Ollie] sw register failed', e));
+    });
+  }
+</script>
 </head>
 <body>
 <div id="app">
   <div id="hdr">
-    <h1>🌟 KiddoAI</h1>
+    <h1>🦉 Ollie</h1>
     <div class="hdr-r">
       <div class="hpill" onclick="openGrade()">Grade <span id="glbl">K</span> ▾</div>
       <button class="hico" onclick="openPin()">👨‍👩‍👧</button>
@@ -242,7 +252,7 @@
 </div></div>
 
 <div class="ov" id="ov-coppa" style="z-index:9999"><div class="sheet" style="max-width:380px"><div class="sh"></div>
-  <div class="st2">👋 Welcome to KiddoAI!</div>
+  <div class="st2">👋 Welcome to Ollie!</div>
   <div style="font-size:12px;color:var(--muted);line-height:1.6;margin:8px 0;text-align:left">
     <p>A parent or guardian must consent before this app can be used.</p>
     <p><strong>What we do:</strong> Voice input is transcribed on your device and sent to Google AI to generate tutoring responses. No child names or personal data are stored on our servers.</p>

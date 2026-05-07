@@ -67,7 +67,7 @@ app.post('/ai/generate', async (req, res) => {
 });
 
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`KiddoAI proxy running on port ${PORT}`);
+  console.log(`Ollie proxy running on port ${PORT}`);
   console.log(`Models: ${PRIMARY} → ${FALLBACK}`);
   console.log(`Test: curl http://localhost:${PORT}/health`);
 });

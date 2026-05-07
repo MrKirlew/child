@@ -1,4 +1,4 @@
-# GATES.md — KiddoAI Quality Gates
+# GATES.md — Ollie Quality Gates
 
 > Owned by: **QA Lead** — changes require Dev Lead approval + full team vote
 > Referenced by: CLAUDE.md `Team Child [task]` Steps 2 and 4
@@ -17,7 +17,7 @@ A ⚠️ on any lens **blocks execution** until resolved with the user.
 | **Sufficiency** | Fully solves the problem, or just part of it? | QA Lead | ⚠️ if partial — scope gap must be acknowledged by user |
 | **Cost** | API call count reasonable? Token budget respected? | AI Engineer | ⚠️ if call count or token usage increases — state the delta |
 | **Visual Appeal** | Output appropriate and engaging for ages 5–12? | UX Guardian | ❌ hard block if content is age-inappropriate or touch targets shrink below 44px |
-| **Marketability** | Makes KiddoAI more compelling to parents/stores? | Platform Engineer | ⚠️ if it regresses a store-facing feature — flag before proceeding |
+| **Marketability** | Makes Ollie more compelling to parents/stores? | Platform Engineer | ⚠️ if it regresses a store-facing feature — flag before proceeding |
 
 **Output format (print for every task):**
 ```

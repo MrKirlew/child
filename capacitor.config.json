@@ -1,6 +1,6 @@
 {
-  "appId": "com.kiddoai.tutor",
-  "appName": "KiddoAI Tutor",
+  "appId": "com.ollieapp.tutor",
+  "appName": "Ollie",
   "webDir": "www",
   "server": {
     "androidScheme": "http"

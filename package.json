@@ -1,7 +1,7 @@
 {
-  "name": "kiddoai-tutor",
+  "name": "ollie",
   "version": "1.0.0",
-  "description": "KiddoAI Tutor - AI-powered educational app for kids (K-6)",
+  "description": "Ollie — AI reading + STEAM tutor for K-6 learners with severe ADHD",
   "scripts": {
     "doctor": "node scripts/doctor.js",
     "pretest": "npm run --silent doctor",
