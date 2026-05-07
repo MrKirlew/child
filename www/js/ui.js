@@ -256,7 +256,11 @@ window._spellMicOn = false;
 window._spellTranscript = '';
 window._spellFinalized = false;
 window._spellRestarts = 0;
-window._SPELL_MAX_RESTARTS = 3;
+// Single-shot listen for the spell mic. Auto-restart was generating audible
+// "listening" beeps on every cycle (Android system sound, can't suppress) —
+// the child heard the mic re-arm three times in a row. Single-shot = one
+// beep total; if no speech is captured, the child taps the mic again.
+window._SPELL_MAX_RESTARTS = 0;
 const _SPELL_TALK_SECONDS = 60;
 
 function _spellCountdownStart(isAndroid) {

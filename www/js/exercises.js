@@ -1,5 +1,5 @@
 /* ══ EXERCISE SYSTEM ══ */
-/* globals: S, SUBS, EX_SUBS, EX_EMOJI, SCOL, GN, CUREX, aiGenerate, speakDirect, esc, reportError, saveS, checkBadges */
+/* globals: S, SUBS, EX_SUBS, EX_EMOJI, SCOL, GN, MATH_SKILLS, MATH_EMOJI, MATH_SKILL_HINT, _GRADE_ORDER, CUREX, aiGenerate, speakDirect, esc, reportError, saveS, checkBadges */
 let CUREX = null;
 
 // System prompt for exercise generation — gives AI context about the educational app
@@ -14,6 +14,32 @@ function renderExSubs() {
   el.innerHTML = EX_SUBS.map(sub =>
     `<div class="exs${sub === S.exSubject ? ' on' : ''}" data-sub="${sub}" onclick="pickExSub('${sub}')" style="${sub === S.exSubject ? 'background:' + SCOL[sub] : ''}">${EX_EMOJI[sub]} ${sub}</div>`
   ).join('');
+  renderMathSkills();
+}
+
+/* ══ MATH SKILL SUB-PICKER ══
+ * Shows when Math is the active subject. Every skill is fully available at
+ * every grade — the world's best teacher teaches the topic at the child's
+ * level instead of refusing. The AI prompt adapts complexity per grade.
+ */
+function renderMathSkills() {
+  const row = document.getElementById('math-skills');
+  if (!row) return;
+  if (S.exSubject !== 'Math') { row.style.display = 'none'; row.innerHTML = ''; return; }
+  if (!S.mathSkill || !MATH_SKILLS.includes(S.mathSkill)) S.mathSkill = 'Counting';
+  row.style.display = 'flex';
+  row.style.flexWrap = 'wrap';
+  row.style.gap = '6px';
+  row.style.marginTop = '6px';
+  row.innerHTML = MATH_SKILLS.map(skill => {
+    const active = skill === S.mathSkill ? ' on' : '';
+    const bg = skill === S.mathSkill ? 'background:' + SCOL.Math : '';
+    return `<div class="exs${active}" data-skill="${skill}" onclick="pickMathSkill('${skill}')" style="${bg}">${MATH_EMOJI[skill]} ${skill}</div>`;
+  }).join('');
+}
+function pickMathSkill(skill) {
+  if (!MATH_SKILLS.includes(skill)) return;
+  S.mathSkill = skill; saveS(); renderMathSkills();
 }
 function pickExSub(sub) {
   S.exSubject = sub; saveS(); renderExSubs();
@@ -24,8 +50,24 @@ const EXPM = () => {
   const typeHint = (sub === 'Comprehension' || sub === 'Grammar') ? 'prefer "voice_answer" or "fill_blank"'
     : sub === 'Math' ? 'prefer "multiple_choice" or "fill_blank"'
     : 'prefer "multiple_choice" or "voice_answer"';
+  // When Math is selected, narrow the prompt to the chosen sub-skill and
+  // require the AI to TEACH it at the child's grade level — never refuse,
+  // never punt to "you'll learn this later", never tell the child the topic
+  // is for older kids. A 5-year-old asking about division gets a real,
+  // grade-K explanation (sharing cookies into equal piles) — not a no.
+  const mathFocus = (sub === 'Math' && S.mathSkill && MATH_SKILL_HINT[S.mathSkill])
+    ? `\nMath focus: ${S.mathSkill}. ${MATH_SKILL_HINT[S.mathSkill]}\nMANDATORY: Teach ${S.mathSkill} at Grade ${S.grade} level. Do NOT refuse, do NOT say it is for older grades, do NOT redirect to a different skill. Adapt the complexity. For Counting at K: 1-10 objects. For Multiplying at K: equal groups of 2 ("two cookies for you, two for me, that is two groups of two"). For Dividing at K: sharing equally ("share 4 apples between 2 friends"). Make it concrete, hands-on, and short.`
+    : '';
+  // Tell the model the last few questions we've already shown so it doesn't
+  // repeat — children get bored and disengage when they see the same prompt
+  // back-to-back. The list is populated by renderEx() on every shown
+  // exercise (not just answered ones) so re-rolls also count toward dedup.
+  const recentQs = (S.lastQuestions || []).slice(0, 5);
+  const dedupHint = recentQs.length
+    ? `\nIMPORTANT: Do NOT repeat or closely paraphrase any of these recent questions the child has already seen:\n${recentQs.map((q, i) => `${i + 1}. "${q}"`).join('\n')}\nThe new exercise must cover a different angle, different numbers, or a different scenario.`
+    : '';
   return `Generate ONE ${sub} exercise for Grade ${S.grade}, difficulty ${S.diff}.
-${GN[S.grade]}
+${GN[S.grade]}${mathFocus}${dedupHint}
 Subject: ${sub}. ${typeHint}.
 IMPORTANT: All questions must work when read aloud. No diagrams, no images, no "look at" references.
 Return ONLY this JSON (include ALL fields for the chosen type):
@@ -36,7 +78,8 @@ For voice_answer: {"type":"voice_answer","question":"clear question to answer ve
 
 const CHKPM = (q, correct, given) => `Grade ${S.grade} ${(CUREX && CUREX.detectedSubject) || 'General'}. Question: ${q}. Correct answer: ${correct}. Child's answer: ${given}.
 Is the child's answer essentially correct? Accept minor spelling, phrasing, and synonym differences.
-Return ONLY JSON: {"correct":true,"feedback":"1-2 encouraging sentences","explanation":"brief teaching note if wrong"}`; // CHKPM v3 — 2026-04-11
+Feedback rules: under 12 words. Start with a warm affirmation of effort ("Nice thinking", "You stayed with it", "Great try"). No clinical language about the child. No labels.
+Return ONLY JSON: {"correct":true,"feedback":"warm affirmation under 12 words","explanation":"brief teaching note if wrong, under 20 words"}`; // CHKPM v4 — 2026-04-18
 
 async function newEx() {
   CUREX = null;
@@ -48,9 +91,24 @@ async function newEx() {
   document.getElementById('exnext').style.display = 'none';
   document.getElementById('vatr').textContent = ''; document.getElementById('fbinp').value = '';
   [0, 1, 2, 3].forEach(i => { const e = document.getElementById('o' + i); e.className = 'mco'; e.textContent = ''; });
+  // Normalize a question to a comparable form for client-side dedup. We
+  // strip non-alphanumerics + lowercase + cap at 60 chars so cosmetic
+  // differences ("the number two" vs "two") don't slip a near-duplicate
+  // past the AI's own dedup pass.
+  const _qNorm = (q) => String(q || '').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 60);
   try {
-    const raw = await aiGenerate(EXPM(), EXSYS, 400);
-    let ex; try { ex = JSON.parse(raw.replace(/```json|```/g, '').trim()); } catch (_e) { document.getElementById('exq').textContent = 'Could not generate exercise. Check connection.'; nb.disabled = false; document.getElementById('exload').style.display = 'none'; return; }
+    let ex = null;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const raw = await aiGenerate(EXPM(), EXSYS, 400);
+      let parsed; try { parsed = JSON.parse(raw.replace(/```json|```/g, '').trim()); } catch (_e) { parsed = null; }
+      if (!parsed || !parsed.question) { ex = parsed; break; }
+      const candidate = _qNorm(parsed.question || parsed.sentence);
+      const recent = (S.lastQuestions || []).map(_qNorm);
+      if (!recent.includes(candidate)) { ex = parsed; break; }
+      // AI returned a duplicate despite the prompt hint — try once more.
+      ex = parsed; // fallback: keep the duplicate if the retry also fails
+    }
+    if (!ex) { document.getElementById('exq').textContent = 'Could not generate exercise. Check connection.'; nb.disabled = false; document.getElementById('exload').style.display = 'none'; return; }
     CUREX = ex; renderEx(ex);
   } catch (_e) { document.getElementById('exq').textContent = 'Connection error. Check your API key.'; }
   nb.disabled = false; document.getElementById('exload').style.display = 'none';
@@ -64,6 +122,16 @@ function renderEx(ex) {
   if (ex.type === 'multiple_choice' && (!Array.isArray(ex.options) || ex.options.length < 2 || typeof ex.correct_index !== 'number')) {
     document.getElementById('exq').textContent = 'Exercise failed to load. Try again!';
     document.getElementById('exnew').style.display = 'block'; return;
+  }
+  // Track the question text for dedup BEFORE rendering. We use shown-not-
+  // answered so re-rolls also count — otherwise a child who taps "New
+  // Exercise" repeatedly without answering would still see repeats.
+  S.lastQuestions = S.lastQuestions || [];
+  const qText = ex.question || ex.sentence || '';
+  if (qText && S.lastQuestions[0] !== qText) {
+    S.lastQuestions.unshift(qText);
+    if (S.lastQuestions.length > 8) S.lastQuestions = S.lastQuestions.slice(0, 8);
+    saveS();
   }
   const exSub = (ex.detectedSubject && SUBS.includes(ex.detectedSubject)) ? ex.detectedSubject : 'Comprehension';
   const tag = document.getElementById('extag');
@@ -152,6 +220,10 @@ function finishEx(ok, explanation, correctAns) {
   if (!S.ex[exSub]) S.ex[exSub] = { c: 0, t: 0 };
   S.ex[exSub].t++; S.totalEx++; if (ok) S.ex[exSub].c++;
   S.cnt[exSub] = (S.cnt[exSub] || 0) + 1;
+  if (exSub === 'Math' && S.mathSkill) {
+    if (!S.cnt.MathSkills) S.cnt.MathSkills = { Counting: 0, Adding: 0, Subtracting: 0, Multiplying: 0, Dividing: 0 };
+    S.cnt.MathSkills[S.mathSkill] = (S.cnt.MathSkills[S.mathSkill] || 0) + 1;
+  }
   S.recentEx.unshift({ sub: exSub, correct: ok, q: (CUREX.question || CUREX.sentence || '').substring(0, 45) });
   if (S.recentEx.length > 12) S.recentEx.pop();
   saveS(); checkBadges(); updScoreBar();
