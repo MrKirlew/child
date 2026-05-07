@@ -55,7 +55,10 @@ module.exports = [
         sendTyped: 'readonly', spellWord: 'readonly', showSpellResult: 'readonly', togSpellMic: 'readonly',
         setMode: 'readonly',
         // Observability + logger globals (defined by observability.js / logger.js)
-        Sentry: 'readonly', Logger: 'readonly',
+        Sentry: 'readonly', Logger: 'readonly', progBus: 'readonly',
+        // CommonJS sentinel — used by browser scripts that also export to
+        // Node for unit tests via `typeof module !== 'undefined' && module.exports = ...`
+        module: 'readonly',
         // Web APIs not in globals.browser
         SpeechRecognition: 'readonly', webkitSpeechRecognition: 'readonly',
       }

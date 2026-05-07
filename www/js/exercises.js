@@ -226,6 +226,7 @@ function finishEx(ok, explanation, correctAns) {
   }
   S.recentEx.unshift({ sub: exSub, correct: ok, q: (CUREX.question || CUREX.sentence || '').substring(0, 45) });
   if (S.recentEx.length > 12) S.recentEx.pop();
+  if (typeof progBus !== 'undefined') progBus.recordActivity(S, exSub, 'exercise', ok);
   saveS(); checkBadges(); updScoreBar();
   speakDirect(fb.textContent.replace(/[✅❌🔥💪]/g, '').substring(0, 200));
   document.getElementById('exnext').style.display = 'block';

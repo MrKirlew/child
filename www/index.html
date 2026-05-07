@@ -321,7 +321,7 @@ let S={
   cnt:{Spelling:0,Grammar:0,Comprehension:0,Astrology:0,Geology:0,Biology:0,Science:0,Technology:0,Engineering:0,Math:0,MathSkills:{Counting:0,Adding:0,Subtracting:0,Multiplying:0,Dividing:0}},
   ex:{Spelling:{c:0,t:0},Grammar:{c:0,t:0},Comprehension:{c:0,t:0},Astrology:{c:0,t:0},Geology:{c:0,t:0},Biology:{c:0,t:0},Science:{c:0,t:0},Technology:{c:0,t:0},Engineering:{c:0,t:0},Math:{c:0,t:0}},
   streak:0,bestStreak:0,totalEx:0,
-  earnedBadges:[],recentEx:[],recentQ:[],chatHist:[],busy:false
+  earnedBadges:[],recentEx:[],recentQ:[],lastQuestions:[],lastActiveAt:null,chatHist:[],busy:false
 };
 function saveS(){try{const {chatHist,busy,...r}=S;localStorage.setItem('kai5',JSON.stringify(r));}catch(e){}} // eslint-disable-line no-empty -- storage quota
 function loadS(){try{const d=localStorage.getItem('kai5');if(d)Object.assign(S,JSON.parse(d));}catch(e){}} // eslint-disable-line no-empty -- corrupt storage
@@ -407,6 +407,7 @@ const VIZ=(()=>{
 <script src="https://browser.sentry-cdn.com/10.52.0/bundle.min.js" crossorigin="anonymous"></script>
 <script src="js/observability.js"></script>
 <script src="js/logger.js"></script>
+<script src="js/progbus.js"></script>
 <script src="js/countdown.js"></script>
 <script src="js/spell-tools.js"></script>
 <script src="js/speech.js"></script>

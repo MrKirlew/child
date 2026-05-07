@@ -6,7 +6,16 @@ function setMode(m) { S.mode = m; saveS(); document.body.className = (m === 'nor
 function setDiff(d) { S.diff = d; saveS(); document.querySelectorAll('[data-d]').forEach(e => e.classList.toggle('on', e.dataset.d === d)); }
 function setListenWait(s) { S.listenWait = s; saveS(); document.querySelectorAll('[data-lw]').forEach(e => e.classList.toggle('on', parseInt(e.dataset.lw, 10) === s)); }
 function pickGrade(g) { S.grade = g; S.chatHist = []; saveS(); document.getElementById('glbl').textContent = g; document.querySelectorAll('#gpr .pl').forEach(e => e.classList.toggle('on', e.dataset.g === g)); }
-function closeAll() { document.querySelectorAll('.ov').forEach(o => o.classList.remove('open')); }
+function closeAll() {
+  // Release the parent-dashboard live-sync subscription before the modal
+  // is hidden. Skipping this would leak progBus listeners across opens.
+  const dash = document.getElementById('ov-dash');
+  if (dash && dash.__progSub && typeof progBus !== 'undefined') {
+    progBus.off('activity', dash.__progSub);
+    dash.__progSub = null;
+  }
+  document.querySelectorAll('.ov').forEach(o => o.classList.remove('open'));
+}
 function openGrade() { document.querySelectorAll('#gpr .pl').forEach(e => e.classList.toggle('on', e.dataset.g === S.grade)); document.getElementById('ov-grade').classList.add('open'); }
 function openPin() { document.getElementById('pin-inp').value = ''; document.getElementById('pin-err').textContent = ''; document.getElementById('ov-pin').classList.add('open'); }
 
@@ -17,18 +26,75 @@ async function chkPin() {
   else document.getElementById('pin-err').textContent = 'Wrong PIN. Try again!';
 }
 
-function openDash() {
+function _dashTimeSince(iso) {
+  if (!iso) return '—';
+  const t = new Date(iso).getTime();
+  if (Number.isNaN(t)) return '—';
+  const diff = Math.max(0, Date.now() - t);
+  const sec = Math.floor(diff / 1000);
+  if (sec < 60) return 'just now';
+  const min = Math.floor(sec / 60);
+  if (min < 60) return min + 'm ago';
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return hr + 'h ago';
+  const day = Math.floor(hr / 24);
+  if (day < 7) return day + 'd ago';
+  return Math.floor(day / 7) + 'w ago';
+}
+
+function _renderDash() {
   const tot = Object.values(S.ex).reduce((a, b) => a + b.t, 0);
+  const cor = Object.values(S.ex).reduce((a, b) => a + b.c, 0);
+  const accuracy = tot ? Math.round(cor / tot * 100) + '%' : '—';
+  const lastActive = _dashTimeSince(S.lastActiveAt);
   const dailyTokens = _getDailyTokens();
   const tokenWarn = dailyTokens > 50000 ? `<div style="background:rgba(245,158,11,.12);border:1.5px solid rgba(245,158,11,.3);border-radius:10px;padding:8px;margin-bottom:8px;font-size:11px;font-weight:700;color:#D97706;text-align:center">High usage today: ~${Math.round(dailyTokens / 1000)}k tokens</div>` : '';
-  document.getElementById('d-stats').innerHTML = tokenWarn + `<div class="sc2"><div class="sn2">${tot}</div><div class="sl2">Exercises</div></div><div class="sc2"><div class="sn2">${S.earnedBadges.length}</div><div class="sl2">Badges</div></div><div class="sc2"><div class="sn2">${S.bestStreak}</div><div class="sl2">Best Streak</div></div><div class="sc2"><div class="sn2">Gr.${S.grade}</div><div class="sl2">Grade</div></div>`;
+  document.getElementById('d-stats').innerHTML = tokenWarn
+    + `<div class="sc2"><div class="sn2">${tot}</div><div class="sl2">Exercises</div></div>`
+    + `<div class="sc2"><div class="sn2">${accuracy}</div><div class="sl2">Accuracy</div></div>`
+    + `<div class="sc2"><div class="sn2">${S.earnedBadges.length}</div><div class="sl2">Badges</div></div>`
+    + `<div class="sc2"><div class="sn2">${S.bestStreak}</div><div class="sl2">Best Streak</div></div>`
+    + `<div class="sc2"><div class="sn2">Gr.${S.grade}</div><div class="sl2">Grade</div></div>`
+    + `<div class="sc2"><div class="sn2">${lastActive}</div><div class="sl2">Last Active</div></div>`;
   document.querySelectorAll('#mpr [data-mode]').forEach(e => e.classList.toggle('on', e.dataset.mode === (S.mode || 'normal')));
   document.querySelectorAll('#dpr [data-d]').forEach(e => e.classList.toggle('on', e.dataset.d === S.diff));
   document.querySelectorAll('#lwr [data-lw]').forEach(e => e.classList.toggle('on', parseInt(e.dataset.lw, 10) === (S.listenWait || 60)));
-  const mx = Math.max(...Object.values(S.ex).map(e => e.t), 1);
-  document.getElementById('d-bars').innerHTML = SUBS.map(sub => { const d = S.ex[sub] || { c: 0, t: 0 }; return `<div class="brc"><div class="brn">${sub}</div><div class="brt"><div class="brf" style="width:${Math.round(d.t / mx * 100)}%;background:${SCOL[sub]}"></div></div><div class="brv">${d.t}</div></div>`; }).join('');
-  document.getElementById('ov-dash').classList.add('open');
+  // Subject performance: accuracy% where available, raw count otherwise.
+  // Compute weakest subject (≥3 tries) so we can flag it for parent.
+  let weakest = null; let worstAcc = 101;
+  for (const sub of SUBS) {
+    const ex = S.ex[sub] || { c: 0, t: 0 };
+    if (ex.t < 3) continue;
+    const acc = (ex.c / ex.t) * 100;
+    if (acc < worstAcc) { worstAcc = acc; weakest = sub; }
+  }
+  const mx = Math.max(...SUBS.map(s => Math.max((S.cnt && S.cnt[s]) || 0, (S.ex[s] || { t: 0 }).t)), 1);
+  document.getElementById('d-bars').innerHTML = SUBS.map(sub => {
+    const ex = S.ex[sub] || { c: 0, t: 0 };
+    const activity = Math.max((S.cnt && S.cnt[sub]) || 0, ex.t);
+    const acc = ex.t ? Math.round(ex.c / ex.t * 100) + '%' : (activity ? activity + '×' : '—');
+    const pill = (sub === weakest) ? ' <span class="needs-prac">💪 needs practice</span>' : '';
+    return `<div class="brc"><div class="brn">${sub}${pill}</div><div class="brt"><div class="brf" style="width:${Math.round(activity / mx * 100)}%;background:${SCOL[sub]}"></div></div><div class="brv">${acc}</div></div>`;
+  }).join('');
 }
+
+function openDash() {
+  _renderDash();
+  document.getElementById('ov-dash').classList.add('open');
+  // Live sync: re-render whenever an activity event fires while the
+  // dashboard is open. Captured to a handle on the modal so we can
+  // unsubscribe cleanly when it closes.
+  if (typeof progBus !== 'undefined') {
+    const dash = document.getElementById('ov-dash');
+    if (dash && !dash.__progSub) {
+      dash.__progSub = _renderDash;
+      progBus.on('activity', dash.__progSub);
+    }
+  }
+}
+
+// closeAll() above releases the dashboard's progBus subscription before
+// hiding the modal — see the inline comment in closeAll for details.
 function openChgPin() { closeAll(); document.getElementById('p1').value = ''; document.getElementById('p2').value = ''; document.getElementById('chpe').textContent = ''; document.getElementById('ov-chpin').classList.add('open'); }
 
 async function saveChgPin() {
@@ -203,7 +269,9 @@ async function spellWord() {
     _spellHistory.unshift({ word: result.word || word, letters: result.letters || word.split(''), meaning: result.meaning || '' });
     if (_spellHistory.length > 20) _spellHistory.pop();
     _saveSpellHistory(); _renderSpellHistory();
-    S.cnt.Spelling = (S.cnt.Spelling || 0) + 1; saveS(); checkBadges();
+    S.cnt.Spelling = (S.cnt.Spelling || 0) + 1;
+    if (typeof progBus !== 'undefined') progBus.recordActivity(S, 'Spelling', 'spell');
+    saveS(); checkBadges();
   } catch (e) {
     console.error('[Ollie] spellWord error:', e.message);
     document.getElementById('spell-meaning').textContent = 'Oops! Could not look up that word. Try again!';

@@ -89,6 +89,7 @@ function recordLearnActivity(subject, userMsg) {
     S.recentQ.unshift({ sub: detSub, grade: S.grade, q: prompt.substring(0, 55) });
     if (S.recentQ.length > 12) S.recentQ.pop();
   }
+  if (typeof progBus !== 'undefined') progBus.recordActivity(S, detSub, 'learn');
   saveS();
   checkBadges();
   return detSub;
