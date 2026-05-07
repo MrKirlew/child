@@ -2,7 +2,7 @@
 // network-first for /api/* (so the kid always gets fresh AI responses).
 // Bump CACHE_NAME on each release to invalidate stale shells.
 
-const CACHE_NAME = 'ollie-shell-v1';
+const CACHE_NAME = 'ollie-shell-v2';
 const SHELL = [
   '/',
   '/index.html',
@@ -40,11 +40,13 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
-  // Network-first for API calls — fresh data matters more than cache hits.
-  if (url.pathname.startsWith('/api/')) {
-    event.respondWith(fetch(event.request).catch(() => caches.match(event.request)));
-    return;
-  }
+  // Bypass the service worker entirely for API calls. Without calling
+  // respondWith() the request goes to the network normally — same effect
+  // as network-first with no cache fallback. Catches a v1 bug where
+  // fetch().catch(() => caches.match()) returned undefined for uncached
+  // /api/* paths, which corrupted the response with "Failed to convert
+  // value to 'Response'" and leaked into the caller as a cryptic error.
+  if (url.pathname.startsWith('/api/')) return;
 
   // Cache-first for everything else; fall through to network on miss.
   event.respondWith(
