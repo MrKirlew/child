@@ -1,5 +1,5 @@
 /* ══ AI ENGINE ══ */
-/* globals: S, SUBS, GN, DN, SN, SCOL, saveS, esc, fmt, addBub, addTyp, rmTyp, reportError, speak, checkBadges, NB, VIZ, hashPin */
+/* globals: S, SUBS, GN, DN, SN, SCOL, saveS, esc, fmt, addBub, addTyp, rmTyp, reportError, speak, checkBadges, NB, VIZ, hashPin, SpellTools, lookupSpellWord, runSpellCeremony */
 
 /* ══ PROMPT CACHE (sessionStorage, 10-min TTL) ══ */
 async function _cacheKey(model, sys, user, diff) {
@@ -129,6 +129,12 @@ TEACHING APPROACH:
 - Vary your praise — don't repeat the same phrase every time. Mix it up.
 - Ask ONE follow-up question based on what they just told you to keep them engaged.
 - Give all directions as if talking on the phone — describe everything with words, never reference anything visual.
+- Praise EFFORT, not just correctness. Phrases like "you really thought about that" and "I love how you tried" matter more than "good job".
+- Offer one step at a time. If a question has multiple parts, slow down and walk through one piece, then check in.
+- If the child asks how to spell a word, use this exact order: say the word once, spell it letter by letter, then give one brief kid-friendly definition. Keep it short and direct.
+- Use warm, patient language only. Never describe the child or comment on their attention, focus, or ability to concentrate. Never label them in any way.
+- The child has the full microphone window. If they pause, stay quiet and wait — pauses are thinking, not stopping.
+- TEACH EVERY TOPIC AT THE CHILD'S LEVEL. If a kindergartner asks about division, teach it at K-level (sharing cookies into equal piles). If a Grade 6 student asks about counting, give a more interesting framing (counting by 7s). NEVER tell a child a topic is "for older kids" or "you'll learn that later." The world's best teacher always finds a way to teach what the child wants to learn. Adapt complexity, never refuse.
 
 SUBJECTS — detect from what the child says:
 - Spelling: ${SN.Spelling}
@@ -147,15 +153,27 @@ Just speak naturally to the child in English. Do NOT return JSON. Do NOT use mar
 // REST API version of the system prompt — includes JSON format requirement for exercise generation
 function sysPmtJSON() {
   return sysPmt().replace(
-    'Just speak naturally to the child. Do NOT return JSON. Do NOT use markdown. Just talk.',
+    'Just speak naturally to the child in English. Do NOT return JSON. Do NOT use markdown. Just talk.',
     'Return ONLY valid JSON: {"message":"your spoken response","phonics":[],"passage":"","lessonType":"Teaching|Practice|Quiz|Comprehension|Spelling|Math","detectedSubject":"Spelling|Grammar|Comprehension|Science|Technology|Engineering|Math"}'
   );
 }
 
 async function callAI(userMsg, hist) {
   rememberConversationTurn('user', userMsg);
+  const spellTarget = SpellTools.extractSpellTarget(userMsg);
   addTyp();
   try {
+    if (spellTarget && typeof lookupSpellWord === 'function' && typeof runSpellCeremony === 'function') {
+      const result = await lookupSpellWord(spellTarget);
+      rmTyp();
+      const msg = SpellTools.buildSpellTeachMessage(result, spellTarget);
+      rememberConversationTurn('assistant', msg);
+      addBub('ai', msg, { lessonType: 'Spelling', detectedSubject: 'Spelling' });
+      recordLearnActivity('Spelling', userMsg);
+      await runSpellCeremony(result.word || spellTarget, result.meaning);
+      S.busy = false;
+      return;
+    }
     const histStr = hist.map(m => (m.role === 'user' ? 'User: ' : 'Assistant: ') + m.content).join('\n');
     const raw = await aiGenerate(histStr, sysPmtJSON(), 300);
     if (!raw || !raw.trim()) throw new Error('Empty AI response');
