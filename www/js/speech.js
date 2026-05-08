@@ -587,7 +587,22 @@ function micUI(id, on) {
 // Called by Android native TTS when done (for exercise tab fallback)
 function onAndroidTTSDone() { VIZ.stop(); }
 
-/* ══ STT — EXERCISE TAB (still uses SpeechRecognizer) ══ */
+/* ══ STT — EXERCISE TAB (informational hint only, no recognizer) ══
+ * The exercise mic used to start Android's SpeechRecognizer + a 60-second
+ * countdown ring. That triggered the same unsuppressable system listening
+ * tone the spell tab hit (see commit 09a7755), and the countdown-driven
+ * auto-restart could turn one beep into many. Now the button just speaks
+ * a short instructional sentence — child types the answer or uses the
+ * keyboard's built-in mic button (which is a system IME and does NOT play
+ * the tone).
+ *
+ * The recognizer-era helpers below (_exCountdownStart, _finalizeEx,
+ * _exStartRecognizer, stopEMic) and module state (_emic, _esr,
+ * _exTranscript, _exFinalized, _exRestarts) are intentionally left in
+ * place as no-ops. NB.call('startListening') is never invoked from
+ * togExMic anymore, so they remain dormant. The Android event callbacks
+ * below early-return to drop any straggling recognizer events.
+ */
 const NB = {
   get ok() { return window.IS_ANDROID && window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.SpeechPlugin; },
   call(method, args) { if (this.ok) try { window.Capacitor.Plugins.SpeechPlugin[method](args || {}).catch(() => {}); } catch (_e) { /* bridge unavailable */ } },
@@ -621,30 +636,8 @@ function _finalizeEx(isAndroid) {
 }
 
 function togExMic() {
-  if (_emic) { _finalizeEx(NB.ok); return; }
-  _speechTarget = 'exercise';
-  _exTranscript = ''; _exFinalized = false; _exRestarts = 0;
-  const stage = document.getElementById('exmic-stage');
-  if (stage) stage.classList.add('active');
-  document.body.classList.add('listening-mode');
-  if (NB.ok) {
-    _emic = true; micUI('exmic', true);
-    document.getElementById('vatr').textContent = '🎤 Listening...';
-    NB.call('startListening');
-    _exCountdownStart({ android: true });
-    return;
-  }
-  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SR) {
-    document.getElementById('vatr').textContent = 'Speech not available';
-    if (stage) stage.classList.remove('active');
-    document.body.classList.remove('listening-mode');
-    return;
-  }
-  _emic = true; micUI('exmic', true);
-  document.getElementById('vatr').textContent = '🎤 Listening...';
-  _exStartRecognizer(SR);
-  _exCountdownStart({ android: false });
+  try { stopAll(); } catch (_e) { /* defensive — TTS may be mid-flight */ }
+  speakDirect('Type your answer, or tap the microphone on your keyboard to speak it.');
 }
 
 function _exStartRecognizer(SR) {
@@ -685,35 +678,8 @@ function stopEMic() {
   document.body.classList.remove('listening-mode');
 }
 
-// Android speech callbacks
-function onAndroidSpeechResult(t) {
-  // Spell tab mic was removed (system tone + restart loop). Any residual
-  // recognizer events for spell are dropped here.
-  if (window._spellMicActive) return;
-  if (_speechTarget === 'exercise') {
-    if (_exFinalized) return;
-    if (t) _exTranscript = t;
-    document.getElementById('vatr').textContent = t || '';
-    if (_emic && !_exFinalized && _exRestarts < _EX_MAX_RESTARTS) {
-      _exRestarts += 1;
-      try { NB.call('startListening'); } catch (_e) { _finalizeEx(true); }
-    } else {
-      _finalizeEx(true);
-    }
-  }
-}
-function onAndroidSpeechError(reason) {
-  const msg = reason || "Couldn't hear you";
-  reportError('speech', msg, _speechTarget);
-  // Spell tab mic removed — drop any straggling error events for it.
-  if (window._spellMicActive) return;
-  if (_speechTarget === 'exercise') {
-    if (_emic && !_exFinalized && _exRestarts < _EX_MAX_RESTARTS) {
-      _exRestarts += 1;
-      try { NB.call('startListening'); } catch (_e) { _finalizeEx(true); }
-      return;
-    }
-    document.getElementById('vatr').textContent = msg;
-    _finalizeEx(true);
-  }
-}
+// Android speech callbacks — spell + exercise mics no longer start the
+// recognizer, so any event arriving here is stale (e.g., from a recognizer
+// session that began before app upgrade). Drop everything.
+function onAndroidSpeechResult(_t) { /* noop — recognizer not used */ }
+function onAndroidSpeechError(_reason) { /* noop — recognizer not used */ }

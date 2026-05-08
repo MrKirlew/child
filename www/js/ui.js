@@ -483,18 +483,18 @@ async function sayItAgain(idx) {
   await runSpellCeremony(h.word, h.letters, Promise.resolve(h.meaning));
 }
 
-/* ══ SPELL MIC — informational hint only ══
+/* ══ SPELL MIC — speaks instructional hint + shows toast ══
  * The in-app SpeechRecognizer is intentionally NOT used here: Android
  * plays an unsuppressable notification tone the first time
- * SpeechRecognizer.startListening fires within a session, and the
- * previous countdown-driven auto-restart turned that into a beep loop.
- * The system keyboard's mic button (system IME) does not have that
- * problem, so we point children at it instead.
+ * SpeechRecognizer.startListening fires within a session. The system
+ * keyboard's mic button (system IME) does not have that problem, so we
+ * point children at it instead.
  *
- * The 🎤 button on the spell card is a hint, not a recognizer trigger —
- * tapping it shows a toast explaining the two answer methods. The
- * window._spell* stubs stay as no-ops so any residual external references
- * (cap-sync residue etc.) don't crash.
+ * Tapping the 🎤 on the spell card speaks a short instructional
+ * sentence via speakDirect (Gemini TTS) AND surfaces the same message
+ * as a visual toast — so a child with the device muted still gets the
+ * cue. The window._spell* stubs stay as no-ops so any residual external
+ * references (cap-sync residue etc.) don't crash.
  */
 window._spellMicOn = false;
 window._spellMicActive = false;
@@ -504,7 +504,10 @@ window._spellRestarts = 0;
 window._SPELL_MAX_RESTARTS = 0;
 window._finalizeSpell = function () { /* noop — recognizer not used here */ };
 function togSpellMic() {
-  showToast('Type your word, or tap the 🎤 on your keyboard to speak it!', { ms: 4500 });
+  const msg = 'Type your word, or tap the microphone on your keyboard to speak it.';
+  try { stopAll(); } catch (_e) { /* defensive */ }
+  speakDirect(msg);
+  showToast(msg, { ms: 4500 });
 }
 
 function _deleteSpellWord(idx) {
