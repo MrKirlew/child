@@ -48,14 +48,28 @@
     on(event, wrapper);
   }
 
-  // Convenience for writers: stamp `lastActiveAt` on the shared state and
-  // emit an 'activity' event in one call. Caller still needs to call
-  // saveS() afterwards to persist to localStorage. Kept on the bus rather
-  // than spread across each writer so all three live-tracked sources
-  // (exercises, learn, spell) use the same payload shape.
+  // Convenience for writers: stamp `lastActiveAt`, roll the day's count
+  // into `dailyCnt`, and emit an 'activity' event in one call. Caller
+  // still needs to call saveS() afterwards to persist to localStorage.
+  // dailyCnt is capped at 14 most-recent days so it stays tiny in
+  // localStorage and bounds the parent-dash sparkline window.
   function recordActivity(state, sub, kind, correct) {
-    if (state) state.lastActiveAt = new Date().toISOString();
-    emit('activity', { sub: sub || 'Comprehension', kind: kind || 'unknown', correct: correct === true });
+    if (!state) {
+      emit('activity', { sub: sub || 'Comprehension', kind: kind || 'unknown', correct: correct === true });
+      return;
+    }
+    state.lastActiveAt = new Date().toISOString();
+    const day = state.lastActiveAt.slice(0, 10); // YYYY-MM-DD
+    state.dailyCnt = state.dailyCnt || {};
+    state.dailyCnt[day] = state.dailyCnt[day] || {};
+    const s = sub || 'Comprehension';
+    state.dailyCnt[day][s] = (state.dailyCnt[day][s] || 0) + 1;
+    // Trim to the 14 most recent days so the map doesn't grow unbounded.
+    const days = Object.keys(state.dailyCnt).sort();
+    while (days.length > 14) {
+      delete state.dailyCnt[days.shift()];
+    }
+    emit('activity', { sub: s, kind: kind || 'unknown', correct: correct === true });
   }
 
   const progBus = { on, off, emit, once, recordActivity };

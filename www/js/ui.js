@@ -26,6 +26,38 @@ async function chkPin() {
   else document.getElementById('pin-err').textContent = 'Wrong PIN. Try again!';
 }
 
+// Last N days, oldest → newest. Each entry: { day: 'YYYY-MM-DD', count: n }.
+// Used by the parent-dash sparkline and the kid-side streak history modal.
+function _last14Days(state) {
+  const out = [];
+  const today = new Date();
+  for (let i = 13; i >= 0; i--) {
+    const d = new Date(today.getFullYear(), today.getMonth(), today.getDate() - i);
+    const day = d.toISOString().slice(0, 10);
+    const buckets = (state.dailyCnt && state.dailyCnt[day]) || {};
+    const count = Object.values(buckets).reduce((a, b) => a + b, 0);
+    out.push({ day, count });
+  }
+  return out;
+}
+
+// Render an inline SVG sparkline of the last 7 days' total activity.
+function _renderSparkline(state, w, h) {
+  const days = _last14Days(state).slice(-7);
+  const max = Math.max(1, ...days.map(d => d.count));
+  const stepX = w / Math.max(1, days.length - 1);
+  const pts = days.map((d, i) => {
+    const x = i * stepX;
+    const y = h - (d.count / max) * (h - 4) - 2;
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(' ');
+  const lastY = days.length ? (h - (days[days.length - 1].count / max) * (h - 4) - 2) : h / 2;
+  return `<svg class="sparkline" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-label="7-day activity">`
+    + `<polyline fill="none" stroke="var(--purple)" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round" points="${pts}"/>`
+    + `<circle cx="${(days.length - 1) * stepX}" cy="${lastY.toFixed(1)}" r="2.5" fill="var(--purple)"/>`
+    + `</svg>`;
+}
+
 function _dashTimeSince(iso) {
   if (!iso) return '—';
   const t = new Date(iso).getTime();
@@ -69,13 +101,33 @@ function _renderDash() {
     if (acc < worstAcc) { worstAcc = acc; weakest = sub; }
   }
   const mx = Math.max(...SUBS.map(s => Math.max((S.cnt && S.cnt[s]) || 0, (S.ex[s] || { t: 0 }).t)), 1);
-  document.getElementById('d-bars').innerHTML = SUBS.map(sub => {
+  // 7-day activity sparkline header above the per-subject bars.
+  const days7 = _last14Days(S).slice(-7);
+  const total7 = days7.reduce((a, d) => a + d.count, 0);
+  const sparkHTML = `<div class="dash-spark"><div class="spark-row"><span class="spark-lbl">Last 7 days</span><span class="spark-tot">${total7} action${total7 === 1 ? '' : 's'}</span></div>${_renderSparkline(S, 280, 32)}</div>`;
+  document.getElementById('d-bars').innerHTML = sparkHTML + SUBS.map(sub => {
     const ex = S.ex[sub] || { c: 0, t: 0 };
     const activity = Math.max((S.cnt && S.cnt[sub]) || 0, ex.t);
     const acc = ex.t ? Math.round(ex.c / ex.t * 100) + '%' : (activity ? activity + '×' : '—');
     const pill = (sub === weakest) ? ' <span class="needs-prac">💪 needs practice</span>' : '';
     return `<div class="brc"><div class="brn">${sub}${pill}</div><div class="brt"><div class="brf" style="width:${Math.round(activity / mx * 100)}%;background:${SCOL[sub]}"></div></div><div class="brv">${acc}</div></div>`;
   }).join('');
+  // Math skill drilldown — only render when the child has touched any math.
+  const mskBox = document.getElementById('d-math');
+  if (mskBox) {
+    const mskCnt = (S.cnt && S.cnt.MathSkills) || {};
+    const mskTotal = MATH_SKILLS.reduce((a, k) => a + (mskCnt[k] || 0), 0);
+    if (mskTotal > 0) {
+      const mskMax = Math.max(...MATH_SKILLS.map(k => mskCnt[k] || 0), 1);
+      mskBox.innerHTML = `<div class="ds" style="margin-top:8px">🔢 Math skills</div>` + MATH_SKILLS.map(skill => {
+        const n = mskCnt[skill] || 0;
+        const w = Math.round((n / mskMax) * 100);
+        return `<div class="brc msk-row" data-skill="${esc(skill)}" tabindex="0" role="button" aria-label="Practice ${esc(skill)} now"><div class="brn">${MATH_EMOJI[skill] || ''} ${skill}</div><div class="brt"><div class="brf" style="width:${w}%;background:${SCOL.Math}"></div></div><div class="brv">${n || '—'}</div></div>`;
+      }).join('');
+    } else {
+      mskBox.innerHTML = '';
+    }
+  }
 }
 
 function openDash() {
@@ -95,6 +147,124 @@ function openDash() {
 
 // closeAll() above releases the dashboard's progBus subscription before
 // hiding the modal — see the inline comment in closeAll for details.
+
+/* ══ STREAK HISTORY MODAL ══
+ * Tap the streak number on the Progress tab → see last 14 days as
+ * filled/empty circles. Pulls from S.dailyCnt (populated by progBus
+ * recordActivity).
+ */
+function openStreakHistory() {
+  const grid = document.getElementById('streak-grid');
+  if (!grid) return;
+  const days = _last14Days(S);
+  grid.innerHTML = days.map(d => {
+    const date = new Date(d.day);
+    const wd = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][date.getDay()];
+    const dn = date.getDate();
+    const cls = d.count > 0 ? 'sk-day sk-on' : 'sk-day sk-off';
+    return `<div class="${cls}"><div class="sk-circle">${d.count > 0 ? '🔥' : '·'}</div><div class="sk-wd">${wd}</div><div class="sk-dn">${dn}</div></div>`;
+  }).join('');
+  document.getElementById('ov-streak').classList.add('open');
+}
+
+// Delegated click handler for the math-skill drilldown rows in the parent
+// dashboard. Tapping a row routes the child into Exercises with that
+// skill preselected — same bidirectional pattern as the kid Progress tab.
+document.addEventListener('click', function (ev) {
+  const row = ev.target.closest('#d-math .msk-row[data-skill]');
+  if (!row) return;
+  const skill = row.dataset.skill;
+  if (typeof pickExSub === 'function') pickExSub('Math');
+  if (typeof pickMathSkill === 'function') pickMathSkill(skill);
+  if (typeof showTab === 'function') showTab('ex');
+  closeAll();
+});
+
+/* ══ HEADER STREAK INDICATOR + PULSE ══
+ * Updates whenever an activity event fires. Shown as soon as streak >= 1;
+ * pulses on every correct answer when streak >= 5 (gives the child a
+ * dopamine cue without spamming).
+ */
+function _updateHeaderStreak(payload) {
+  const wrap = document.getElementById('hdr-strk');
+  const num = document.getElementById('hdr-strk-num');
+  if (!wrap || !num) return;
+  num.textContent = String(S.streak || 0);
+  if ((S.streak || 0) >= 1) wrap.style.display = 'flex'; else wrap.style.display = 'none';
+  if (payload && payload.correct && (S.streak || 0) >= 5) {
+    wrap.classList.remove('pulse'); // restart animation if already running
+    void wrap.offsetWidth; // force reflow
+    wrap.classList.add('pulse');
+  }
+}
+
+/* ══ TOAST RAIL ══
+ * Lightweight transient banner for "5 wrong in a row" hints and similar.
+ * Auto-dismisses after `ms` (default 4500). Multiple toasts stack.
+ */
+function showToast(text, opts) {
+  const rail = document.getElementById('toast-rail');
+  if (!rail) return;
+  const ms = (opts && opts.ms) || 4500;
+  const node = document.createElement('div');
+  node.className = 'toast';
+  node.textContent = text;
+  rail.appendChild(node);
+  // Force a reflow so the entry transition fires.
+  void node.offsetWidth;
+  node.classList.add('toast-in');
+  setTimeout(() => {
+    node.classList.remove('toast-in');
+    node.classList.add('toast-out');
+    setTimeout(() => node.remove(), 350);
+  }, ms);
+}
+
+/* ══ 5-WRONG-IN-A-ROW HINT ══
+ * Consecutive-wrong tracker per subject. progBus emits 'activity' with
+ * { sub, kind, correct } from finishEx. We increment _wrongStreak[sub]
+ * on wrong (kind=='exercise'), reset on correct. Hitting 5 fires a
+ * single toast — _toastShown[sub] tracks the last-shown timestamp so
+ * we don't re-fire within 5 minutes (avoid spamming a struggling child).
+ */
+(function _wireWrongStreakToast() {
+  if (typeof progBus === 'undefined' || progBus._wrongStreakBound) return;
+  const COOLDOWN_MS = 5 * 60 * 1000;
+  progBus.on('activity', function (p) {
+    if (!p || p.kind !== 'exercise') return;
+    const sub = p.sub || 'this subject';
+    S._wrongStreak = S._wrongStreak || {};
+    S._toastShown = S._toastShown || {};
+    if (p.correct) {
+      S._wrongStreak[sub] = 0;
+      return;
+    }
+    S._wrongStreak[sub] = (S._wrongStreak[sub] || 0) + 1;
+    if (S._wrongStreak[sub] >= 5) {
+      const now = Date.now();
+      const last = S._toastShown[sub] || 0;
+      if (now - last >= COOLDOWN_MS) {
+        S._toastShown[sub] = now;
+        showToast(`Let's try a different ${sub} angle — tap "New Exercise" for a fresh question!`, { ms: 5500 });
+        S._wrongStreak[sub] = 0; // reset so we don't fire on every wrong after 5
+      }
+    }
+  });
+  progBus._wrongStreakBound = true;
+})();
+
+/* ══ HEADER STREAK BUS WIRING ══ */
+(function _wireHeaderStreak() {
+  if (typeof progBus === 'undefined' || progBus._hdrStreakBound) return;
+  progBus.on('activity', _updateHeaderStreak);
+  progBus._hdrStreakBound = true;
+  // Also seed it once on load so a cold open with persisted streak shows
+  // the indicator immediately.
+  if (typeof document !== 'undefined') {
+    if (document.readyState !== 'loading') _updateHeaderStreak({});
+    else document.addEventListener('DOMContentLoaded', () => _updateHeaderStreak({}));
+  }
+})();
 function openChgPin() { closeAll(); document.getElementById('p1').value = ''; document.getElementById('p2').value = ''; document.getElementById('chpe').textContent = ''; document.getElementById('ov-chpin').classList.add('open'); }
 
 async function saveChgPin() {
@@ -224,13 +394,13 @@ async function runSpellCeremony(word, letters, meaningPromise) {
     // remaining letters via Gemini TTS. If nothing played at all, assume
     // the static bundle is missing entirely and fall back in full.
     if (!playedAll && names.length && alive()) {
-      await speakDirect(names.join('. ') + '.', { debugSource: 'Spell letters (fallback)' });
+      await speakDirect(names.join('. ') + '.');
     }
     if (!alive()) return;
     await new Promise(r => setTimeout(r, 250));
   }
   if (!alive()) return;
-  await speakDirect(word, { debugSource: 'Spell word' });
+  await speakDirect(word);
   let meaning = '';
   if (meaningPromise) {
     try { meaning = await meaningPromise; } catch (_e) { meaning = ''; }
@@ -238,7 +408,7 @@ async function runSpellCeremony(word, letters, meaningPromise) {
   if (meaning && alive()) {
     await new Promise(r => setTimeout(r, 250));
     if (!alive()) return;
-    await speakDirect('It means: ' + meaning, { debugSource: 'Spell meaning' });
+    await speakDirect('It means: ' + meaning);
   }
 }
 

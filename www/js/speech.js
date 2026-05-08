@@ -14,44 +14,6 @@ let _listenTimer = null;
 let _transcript = ''; // accumulates model's spoken text for chat bubble
 let _inputTranscript = ''; // accumulates child's speech for chat bubble
 let _lastUserTurn = '';
-let _speechDebugEntries = [];
-
-function _speechDebugTime() {
-  const d = new Date();
-  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-}
-
-function _speechDebugText(text) {
-  return String(text || '').replace(/\s+/g, ' ').trim();
-}
-
-function _renderSpeechDebug() {
-  const nowEl = document.getElementById('speech-debug-now');
-  const listEl = document.getElementById('speech-debug-list');
-  if (!nowEl || !listEl) return;
-  if (!_speechDebugEntries.length) {
-    nowEl.textContent = 'Waiting for Ollie to speak...';
-    listEl.innerHTML = '';
-    return;
-  }
-  nowEl.textContent = _speechDebugEntries[0].text;
-  listEl.innerHTML = _speechDebugEntries.map(entry =>
-    `<div class="speech-debug-item"><div class="speech-debug-meta">${esc(entry.source)}<br>${esc(entry.time)}</div><div class="speech-debug-text">${esc(entry.text)}</div></div>`
-  ).join('');
-}
-
-function _recordSpeechDebug(source, text) {
-  const clean = _speechDebugText(text);
-  if (!clean) return;
-  _speechDebugEntries.unshift({ source: source || 'Speech', text: clean, time: _speechDebugTime() });
-  if (_speechDebugEntries.length > 8) _speechDebugEntries = _speechDebugEntries.slice(0, 8);
-  _renderSpeechDebug();
-}
-
-function clearSpeechDebug() {
-  _speechDebugEntries = [];
-  _renderSpeechDebug();
-}
 
 function getAudioCtx() {
   if (!_audioCtx) _audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 24000 });
@@ -199,7 +161,6 @@ async function _handleServerMsg(ev) {
       try { const parsed = JSON.parse(displayText); if (parsed.message) displayText = parsed.message; } catch (_e) { /* not JSON, use as-is */ }
       rememberConversationTurn('assistant', displayText);
       addBub('ai', displayText, { lessonType: 'Teaching' });
-      _recordSpeechDebug('Learn reply', displayText);
       recordLearnActivity(_detectSubject(displayText), _lastUserTurn);
       _lastUserTurn = '';
     }
@@ -454,7 +415,6 @@ function sendLiveText(text, opts) {
 async function speak(txt) {
   // If Live API is connected, send as text and let model speak it
   if (_ws && _ws.readyState === WebSocket.OPEN) {
-    _recordSpeechDebug('Live exact', txt);
     _ws.send(JSON.stringify({
       clientContent: { turns: [{ role: 'user', parts: [{ text: 'Please say this exactly to the child: ' + txt }] }], turnComplete: true }
     }));
@@ -462,7 +422,6 @@ async function speak(txt) {
   }
   // Gemini REST TTS only — no robotic fallback
   const clean = txt.replace(/[*_~`#]/g, '').substring(0, 800);
-  _recordSpeechDebug('REST exact', clean);
   VIZ.start();
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
@@ -565,7 +524,6 @@ async function _fetchTTS(chunk) {
 
 async function speakDirect(txt, opts) {
   const slow = !!(opts && opts.slow);
-  const debugSource = (opts && opts.debugSource) || 'Direct TTS';
   const clean = txt.replace(/[*_~`#]/g, '').substring(0, 800);
   const rawSentences = clean.match(/[^.!?]+[.!?]+/g) || [clean];
   // Pre-split any over-budget sentences at commas so the 150-token TTS cap
@@ -600,7 +558,6 @@ async function speakDirect(txt, opts) {
   if (!chunks.length) { VIZ.stop(); return; }
 
   VIZ.start();
-  chunks.forEach((chunk, idx) => _recordSpeechDebug(chunks.length > 1 ? `${debugSource} ${idx + 1}` : debugSource, chunk));
   // Pipeline: kick off first fetch before the loop; on each iteration
   // prefetch the NEXT chunk while we await+play the CURRENT one. A single
   // failed chunk no longer aborts the whole utterance — we skip it and
@@ -620,8 +577,6 @@ function stopAll() {
   _stopPlayback();
   VIZ.stop();
 }
-
-window.clearSpeechDebug = clearSpeechDebug;
 
 function micUI(id, on) {
   const b = document.getElementById(id); if (!b) return;

@@ -60,7 +60,21 @@ function updProg() {
   document.getElementById('pt-t').textContent = tot;
   document.getElementById('pt-c').textContent = cor;
   document.getElementById('pt-a').textContent = exTot ? Math.round(cor / exTot * 100) + '%' : '—';
-  document.getElementById('strk-num').textContent = S.streak;
+  // Streak number is tappable — opens the streak-history modal so the
+  // child can see their last 14 days of practice.
+  const strkNum = document.getElementById('strk-num');
+  strkNum.textContent = S.streak;
+  if (!strkNum.__strkWired) {
+    strkNum.style.cursor = 'pointer';
+    strkNum.setAttribute('role', 'button');
+    strkNum.setAttribute('tabindex', '0');
+    strkNum.setAttribute('aria-label', 'Show streak history');
+    strkNum.addEventListener('click', () => { if (typeof openStreakHistory === 'function') openStreakHistory(); });
+    strkNum.addEventListener('keydown', (ev) => {
+      if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); if (typeof openStreakHistory === 'function') openStreakHistory(); }
+    });
+    strkNum.__strkWired = true;
+  }
   document.getElementById('bstrk').textContent = 'Best: ' + S.bestStreak;
   const f = S.streak >= 20 ? '🔥🔥🔥🔥🔥' : S.streak >= 10 ? '🔥🔥🔥' : S.streak >= 5 ? '🔥🔥' : '🔥';
   document.getElementById('strk-fire').textContent = f;

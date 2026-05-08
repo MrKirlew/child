@@ -35,7 +35,6 @@ module.exports = [
         // Cross-module globals
         NB: 'writable', CUREX: 'writable',
         speak: 'readonly', speakDirect: 'readonly', stopAll: 'readonly',
-        clearSpeechDebug: 'readonly',
         onAndroidTTSDone: 'readonly',
         togLMic: 'readonly', micUI: 'readonly',
         connectLive: 'readonly', startConversation: 'readonly', stopConversation: 'readonly', sendLiveText: 'readonly',
@@ -54,6 +53,7 @@ module.exports = [
         acceptCoppa: 'readonly', startApp: 'readonly', setListenWait: 'readonly',
         sendTyped: 'readonly', spellWord: 'readonly', showSpellResult: 'readonly', togSpellMic: 'readonly',
         setMode: 'readonly',
+        openStreakHistory: 'readonly', showToast: 'readonly',
         // Observability + logger globals (defined by observability.js / logger.js)
         Sentry: 'readonly', Logger: 'readonly', progBus: 'readonly',
         // CommonJS sentinel — used by browser scripts that also export to

@@ -85,3 +85,58 @@ describe('progBus event bus', () => {
     expect(spy).toHaveBeenCalledWith(1);
   });
 });
+
+describe('progBus.recordActivity', () => {
+  let bus;
+  beforeEach(() => {
+    bus = loadProgBus();
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-05-07T18:00:00Z'));
+  });
+
+  it('stamps lastActiveAt and rolls dailyCnt[today][sub]', () => {
+    const state = {};
+    bus.recordActivity(state, 'Math', 'exercise', true);
+    expect(state.lastActiveAt).toBe('2026-05-07T18:00:00.000Z');
+    expect(state.dailyCnt['2026-05-07'].Math).toBe(1);
+  });
+
+  it('increments existing dailyCnt entry on subsequent calls', () => {
+    const state = { dailyCnt: { '2026-05-07': { Math: 3 } } };
+    bus.recordActivity(state, 'Math', 'exercise', true);
+    bus.recordActivity(state, 'Math', 'exercise', false);
+    expect(state.dailyCnt['2026-05-07'].Math).toBe(5);
+  });
+
+  it('caps dailyCnt to the 14 most recent days', () => {
+    const state = { dailyCnt: {} };
+    // Seed 16 days of activity manually
+    for (let i = 0; i < 16; i++) {
+      const d = new Date('2026-04-22T12:00:00Z');
+      d.setDate(d.getDate() + i);
+      state.dailyCnt[d.toISOString().slice(0, 10)] = { Math: 1 };
+    }
+    // recordActivity for today should trim oldest entries down to 14
+    bus.recordActivity(state, 'Spelling', 'spell');
+    const days = Object.keys(state.dailyCnt).sort();
+    expect(days.length).toBe(14);
+    // The two oldest seeded days (Apr 22 and Apr 23) should be dropped
+    expect(days[0]).not.toBe('2026-04-22');
+    expect(days[0]).not.toBe('2026-04-23');
+  });
+
+  it('emits an activity event with the normalized payload', () => {
+    const state = {};
+    const spy = vi.fn();
+    bus.on('activity', spy);
+    bus.recordActivity(state, 'Math', 'exercise', true);
+    expect(spy).toHaveBeenCalledWith({ sub: 'Math', kind: 'exercise', correct: true });
+  });
+
+  it('handles missing/null state gracefully (still emits, no throw)', () => {
+    const spy = vi.fn();
+    bus.on('activity', spy);
+    expect(() => bus.recordActivity(null, 'Math', 'exercise', true)).not.toThrow();
+    expect(spy).toHaveBeenCalledOnce();
+  });
+});
