@@ -251,6 +251,11 @@ body.mode-night .toast{background:linear-gradient(135deg,#5B63D6,#7C83FD);box-sh
 .si{width:100%;background:#F8FAFC;border:1.5px solid #E2E8F0;border-radius:11px;padding:9px 12px;font-family:'Nunito',sans-serif;font-weight:700;font-size:14px;color:var(--text);outline:none;transition:border-color .2s}
 .si:focus{border-color:var(--purple)}
 .si::placeholder{color:var(--muted)}
+#spell-mic{flex-shrink:0;width:40px;height:40px;border-radius:50%;border:1.5px solid #E2E8F0;background:#F8FAFC;font-size:18px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;transition:border-color .15s,background .15s,transform .1s}
+#spell-mic:hover,#spell-mic:focus-visible{border-color:#7C3AED;background:rgba(124,58,237,.08);outline:none}
+#spell-mic:active{transform:scale(.92)}
+body.mode-night #spell-mic{background:#1A1A2E;border-color:#0F3460}
+body.mode-night #spell-mic:hover,body.mode-night #spell-mic:focus-visible{border-color:#A78BFA;background:rgba(167,139,250,.12)}
 .sbt{width:100%;background:linear-gradient(135deg,#7C3AED,#8B5CF6);border:none;border-radius:13px;padding:11px;font-family:'Nunito',sans-serif;font-weight:800;font-size:14px;color:#fff;cursor:pointer;margin-top:7px;box-shadow:0 2px 8px rgba(124,58,237,.25)}
 .sbt.sc{background:#F1F5F9;border:1.5px solid #E2E8F0;color:var(--text);box-shadow:none}
 .pin{font-family:'Fredoka One',cursive;font-size:2rem;text-align:center;letter-spacing:12px;width:100%;background:#F8FAFC;border:1.5px solid #E2E8F0;border-radius:11px;padding:11px;color:var(--text);outline:none;margin-bottom:6px}

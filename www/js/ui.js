@@ -483,17 +483,18 @@ async function sayItAgain(idx) {
   await runSpellCeremony(h.word, h.letters, Promise.resolve(h.meaning));
 }
 
-/* ══ SPELL MIC — say a word out loud ══
- * Holds the mic open for the full 60-second talk window. Accumulates the
- * Spell mic was removed in favor of the system keyboard's voice button —
- * the Android SpeechRecognizer plays an unsuppressable system tone on each
- * start, and the on-end auto-restart pattern compounded that into a beep
- * loop the child heard while the countdown ran. The placeholder on the
- * spell input now points kids at the keyboard mic icon as the voice path.
+/* ══ SPELL MIC — informational hint only ══
+ * The in-app SpeechRecognizer is intentionally NOT used here: Android
+ * plays an unsuppressable notification tone the first time
+ * SpeechRecognizer.startListening fires within a session, and the
+ * previous countdown-driven auto-restart turned that into a beep loop.
+ * The system keyboard's mic button (system IME) does not have that
+ * problem, so we point children at it instead.
  *
- * Stubs for togSpellMic + window state below keep any straggling external
- * references (third-party scripts, accidental cap-sync residue) from
- * crashing — they're no-ops.
+ * The 🎤 button on the spell card is a hint, not a recognizer trigger —
+ * tapping it shows a toast explaining the two answer methods. The
+ * window._spell* stubs stay as no-ops so any residual external references
+ * (cap-sync residue etc.) don't crash.
  */
 window._spellMicOn = false;
 window._spellMicActive = false;
@@ -501,8 +502,10 @@ window._spellFinalized = true;
 window._spellTranscript = '';
 window._spellRestarts = 0;
 window._SPELL_MAX_RESTARTS = 0;
-window._finalizeSpell = function () { /* noop — spell mic removed */ };
-function togSpellMic() { /* noop — spell mic removed */ }
+window._finalizeSpell = function () { /* noop — recognizer not used here */ };
+function togSpellMic() {
+  showToast('Type your word, or tap the 🎤 on your keyboard to speak it!', { ms: 4500 });
+}
 
 function _deleteSpellWord(idx) {
   if (idx < 0 || idx >= _spellHistory.length) return;
