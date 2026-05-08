@@ -687,21 +687,9 @@ function stopEMic() {
 
 // Android speech callbacks
 function onAndroidSpeechResult(t) {
-  // Spell tab mic — finalize/restart logic lives on window so ui.js owns it.
-  if (window._spellMicActive) {
-    if (window._spellFinalized) return;
-    const word = (t || '').trim();
-    if (word) window._spellTranscript = word;
-    const lblEl = document.getElementById('spell-listening');
-    if (lblEl) lblEl.textContent = '🎤 Heard: ' + (word || '');
-    if (window._spellMicOn && !window._spellFinalized && (window._spellRestarts || 0) < (window._SPELL_MAX_RESTARTS || 3)) {
-      window._spellRestarts = (window._spellRestarts || 0) + 1;
-      try { NB.call('startListening'); } catch (_e) { if (typeof window._finalizeSpell === 'function') window._finalizeSpell(true); }
-    } else if (typeof window._finalizeSpell === 'function') {
-      window._finalizeSpell(true);
-    }
-    return;
-  }
+  // Spell tab mic was removed (system tone + restart loop). Any residual
+  // recognizer events for spell are dropped here.
+  if (window._spellMicActive) return;
   if (_speechTarget === 'exercise') {
     if (_exFinalized) return;
     if (t) _exTranscript = t;
@@ -717,15 +705,8 @@ function onAndroidSpeechResult(t) {
 function onAndroidSpeechError(reason) {
   const msg = reason || "Couldn't hear you";
   reportError('speech', msg, _speechTarget);
-  if (window._spellMicActive) {
-    if (window._spellMicOn && !window._spellFinalized && (window._spellRestarts || 0) < (window._SPELL_MAX_RESTARTS || 3)) {
-      window._spellRestarts = (window._spellRestarts || 0) + 1;
-      try { NB.call('startListening'); } catch (_e) { if (typeof window._finalizeSpell === 'function') window._finalizeSpell(true); }
-      return;
-    }
-    if (typeof window._finalizeSpell === 'function') window._finalizeSpell(true);
-    return;
-  }
+  // Spell tab mic removed — drop any straggling error events for it.
+  if (window._spellMicActive) return;
   if (_speechTarget === 'exercise') {
     if (_emic && !_exFinalized && _exRestarts < _EX_MAX_RESTARTS) {
       _exRestarts += 1;

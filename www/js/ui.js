@@ -485,112 +485,24 @@ async function sayItAgain(idx) {
 
 /* ══ SPELL MIC — say a word out loud ══
  * Holds the mic open for the full 60-second talk window. Accumulates the
- * recognizer transcript; only finalizes on countdown expiry, manual tap-stop,
- * or fatal recognizer error. State lives on `window` so speech.js's Android
- * callbacks can reach it without cross-script `let` issues.
+ * Spell mic was removed in favor of the system keyboard's voice button —
+ * the Android SpeechRecognizer plays an unsuppressable system tone on each
+ * start, and the on-end auto-restart pattern compounded that into a beep
+ * loop the child heard while the countdown ran. The placeholder on the
+ * spell input now points kids at the keyboard mic icon as the voice path.
+ *
+ * Stubs for togSpellMic + window state below keep any straggling external
+ * references (third-party scripts, accidental cap-sync residue) from
+ * crashing — they're no-ops.
  */
-let _spellSR = null;
 window._spellMicOn = false;
+window._spellMicActive = false;
+window._spellFinalized = true;
 window._spellTranscript = '';
-window._spellFinalized = false;
 window._spellRestarts = 0;
-// Single-shot listen for the spell mic. Auto-restart was generating audible
-// "listening" beeps on every cycle (Android system sound, can't suppress) —
-// the child heard the mic re-arm three times in a row. Single-shot = one
-// beep total; if no speech is captured, the child taps the mic again.
 window._SPELL_MAX_RESTARTS = 0;
-const _SPELL_TALK_SECONDS = 60;
-
-function _spellCountdownStart(isAndroid) {
-  if (typeof Countdown === 'undefined') return;
-  const stage = document.getElementById('spell-mic-stage');
-  if (!stage) return;
-  Countdown.start({
-    seconds: _SPELL_TALK_SECONDS,
-    mountEl: stage,
-    variant: 'spell',
-    onExpire: () => { window._finalizeSpell(isAndroid); }
-  });
-}
-
-window._finalizeSpell = function (isAndroid) {
-  if (window._spellFinalized) return;
-  window._spellFinalized = true;
-  const word = (window._spellTranscript || '').trim();
-  if (isAndroid) NB.call('stopListening');
-  window._spellMicActive = false;
-  _stopSpellMic();
-  if (word) {
-    document.getElementById('spell-inp').value = word;
-    spellWord();
-  }
-};
-
-function togSpellMic() {
-  if (window._spellMicOn) { window._finalizeSpell(NB.ok); return; }
-  window._spellTranscript = '';
-  window._spellFinalized = false;
-  window._spellRestarts = 0;
-  const stage = document.getElementById('spell-mic-stage');
-  if (stage) stage.classList.add('active');
-  document.body.classList.add('listening-mode');
-  // Android native
-  if (NB.ok) {
-    window._spellMicOn = true;
-    document.getElementById('spell-mic').textContent = '⏹';
-    document.getElementById('spell-listening').style.display = 'block';
-    document.getElementById('spell-listening').textContent = '🎤 Listening...';
-    window._spellMicActive = true;
-    NB.call('startListening');
-    _spellCountdownStart(true);
-    return;
-  }
-  // Web Speech API fallback
-  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SR) {
-    document.getElementById('spell-listening').textContent = 'Speech not available on this device';
-    document.getElementById('spell-listening').style.display = 'block';
-    if (stage) stage.classList.remove('active');
-    document.body.classList.remove('listening-mode');
-    return;
-  }
-  _spellSR = new SR();
-  _spellSR.lang = 'en-US';
-  _spellSR.interimResults = true;
-  _spellSR.continuous = true;
-  window._spellMicOn = true;
-  document.getElementById('spell-mic').textContent = '⏹';
-  document.getElementById('spell-listening').style.display = 'block';
-  document.getElementById('spell-listening').textContent = '🎤 Listening...';
-  _spellSR.onresult = e => {
-    let combined = '';
-    for (let i = 0; i < e.results.length; i++) combined += e.results[i][0].transcript;
-    window._spellTranscript = combined;
-    document.getElementById('spell-listening').textContent = '🎤 Heard: ' + combined;
-  };
-  _spellSR.onend = () => {
-    if (window._spellMicOn && !window._spellFinalized && window._spellRestarts < window._SPELL_MAX_RESTARTS) {
-      window._spellRestarts += 1;
-      try { _spellSR.start(); } catch (_e) { window._finalizeSpell(false); }
-    }
-  };
-  _spellSR.onerror = () => { window._finalizeSpell(false); };
-  try { _spellSR.start(); } catch (_e) { window._finalizeSpell(false); }
-  _spellCountdownStart(false);
-}
-
-function _stopSpellMic() {
-  if (_spellSR) { try { _spellSR.stop(); } catch (_e) { /* recognizer already stopped */ } }
-  _spellSR = null;
-  window._spellMicOn = false;
-  window._spellMicActive = false;
-  document.getElementById('spell-mic').textContent = '🎤';
-  document.getElementById('spell-listening').style.display = 'none';
-  if (typeof Countdown !== 'undefined') Countdown.stop();
-  const stage = document.getElementById('spell-mic-stage');
-  if (stage) stage.classList.remove('active');
-  document.body.classList.remove('listening-mode');
-}
+window._finalizeSpell = function () { /* noop — spell mic removed */ };
+function togSpellMic() { /* noop — spell mic removed */ }
 
 function _deleteSpellWord(idx) {
   if (idx < 0 || idx >= _spellHistory.length) return;
