@@ -45,7 +45,10 @@ jobs:
           java-version: 21
       - run: npm ci
       - run: npx cap sync android
-      - run: cd android && ./gradlew assembleDebug
+      - name: Build debug APK
+        run: |
+          chmod +x android/gradlew  # belt-and-suspenders; index mode regressed once (abfe077)
+          cd android && ./gradlew assembleDebug
       - uses: actions/upload-artifact@v7
         with:
           name: debug-apk
@@ -69,7 +72,9 @@ jobs:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-        run: cd android && ./gradlew assembleRelease
+        run: |
+          chmod +x android/gradlew
+          cd android && ./gradlew assembleRelease
       - name: Upload signed release APK
         if: steps.keystore.outputs.configured == 'true'
         uses: actions/upload-artifact@v7
