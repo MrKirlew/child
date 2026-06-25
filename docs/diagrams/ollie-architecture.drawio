@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="drawio" version="26.0.0">
+  <diagram name="Ollie-Architecture">
+    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1500" pageHeight="1020" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- Title -->
+        <mxCell id="title" value="Ollie — System Architecture (as-built)" style="text;html=1;align=left;verticalAlign=middle;fontSize=20;fontStyle=1;fontColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="40" y="10" width="700" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- ================= TIER 1: CLIENT SURFACES ================= -->
+        <mxCell id="sw1" value="① Client Surfaces" style="swimlane;startSize=30;html=1;whiteSpace=wrap;fillColor=#eef3fb;strokeColor=#6c8ebf;fontStyle=1;fontColor=#1a3c66;" vertex="1" parent="1">
+          <mxGeometry x="40" y="50" width="1360" height="170" as="geometry" />
+        </mxCell>
+        <mxCell id="c_web" value="Web PWA — vanilla JS&#xa;www/index.html + sw.js&#xa;(cache-first shell / network-first /api)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="sw1">
+          <mxGeometry x="30" y="50" width="300" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="c_and" value="Android — Capacitor 7&#xa;SpeechPlugin.java: native TTS + SpeechRecognizer&#xa;GemmaPlugin.java: stub (disabled)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="sw1">
+          <mxGeometry x="370" y="50" width="380" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="c_ios" value="iOS — Capacitor&#xa;stub only&#xa;(not released)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#999999;fontColor=#666666;dashed=1;" vertex="1" parent="sw1">
+          <mxGeometry x="790" y="50" width="220" height="100" as="geometry" />
+        </mxCell>
+
+        <!-- ================= TIER 2: CLIENT APP LOGIC ================= -->
+        <mxCell id="sw2" value="② Client App Logic — runs inside WebView / browser" style="swimlane;startSize=30;html=1;whiteSpace=wrap;fillColor=#eef3fb;strokeColor=#6c8ebf;fontStyle=1;fontColor=#1a3c66;" vertex="1" parent="1">
+          <mxGeometry x="40" y="250" width="1360" height="160" as="geometry" />
+        </mxCell>
+        <mxCell id="c_js" value="Client JS modules&#xa;ai.js · speech.js · exercises.js&#xa;progress.js · ui.js · observability.js" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="sw2">
+          <mxGeometry x="30" y="45" width="600" height="95" as="geometry" />
+        </mxCell>
+        <mxCell id="c_store" value="Client storage (no backend DB)&#xa;localStorage: kai5, kai5_spell&#xa;sessionStorage: chat, daily token count" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#205520;" vertex="1" parent="sw2">
+          <mxGeometry x="700" y="35" width="320" height="110" as="geometry" />
+        </mxCell>
+
+        <!-- ================= TIER 3: VERCEL BACKEND ================= -->
+        <mxCell id="sw3" value="③ Vercel Serverless Backend — /api  (each handler wrapped by _observability.js)" style="swimlane;startSize=30;html=1;whiteSpace=wrap;fillColor=#fff7e6;strokeColor=#d79b00;fontStyle=1;fontColor=#8a5a00;" vertex="1" parent="1">
+          <mxGeometry x="40" y="450" width="1360" height="160" as="geometry" />
+        </mxCell>
+        <mxCell id="b_gen" value="POST /api/ai/generate&#xa;text proxy + safetySettings&#xa;3 retries + fallback" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="sw3">
+          <mxGeometry x="20" y="55" width="200" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="b_speak" value="POST /api/ai/speak&#xa;TTS proxy&#xa;(base64 audio)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="sw3">
+          <mxGeometry x="235" y="55" width="195" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="b_token" value="GET /api/ai/live-token&#xa;returns signed WSS URL&#xa;(key stays server-side)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="sw3">
+          <mxGeometry x="445" y="55" width="205" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="b_health" value="GET /api/health&#xa;pings Gemini&#xa;+ git_sha" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="sw3">
+          <mxGeometry x="665" y="55" width="175" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="b_err" value="POST /api/errors&#xa;client error&#xa;reporting" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="sw3">
+          <mxGeometry x="855" y="55" width="175" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- ================= TIER 4: GOOGLE GEMINI ================= -->
+        <mxCell id="sw4" value="④ Google Generative Language API" style="swimlane;startSize=30;html=1;whiteSpace=wrap;fillColor=#fff0e6;strokeColor=#d79b00;fontStyle=1;fontColor=#8a3b00;" vertex="1" parent="1">
+          <mxGeometry x="40" y="650" width="1360" height="180" as="geometry" />
+        </mxCell>
+        <mxCell id="g_text" value="gemini-2.5-flash (text)&#xa;fallback: gemini-2.0-flash" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe0b3;strokeColor=#d79b00;fontColor=#7a3b00;" vertex="1" parent="sw4">
+          <mxGeometry x="20" y="65" width="290" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="g_tts" value="gemini-2.5-flash-preview-tts&#xa;(text-to-speech)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe0b3;strokeColor=#d79b00;fontColor=#7a3b00;" vertex="1" parent="sw4">
+          <mxGeometry x="345" y="65" width="290" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="g_live" value="gemini-3.1-flash-live-preview&#xa;(real-time voice, WebSocket)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe0b3;strokeColor=#d79b00;fontColor=#7a3b00;" vertex="1" parent="sw4">
+          <mxGeometry x="1030" y="65" width="300" height="90" as="geometry" />
+        </mxCell>
+
+        <!-- ================= SENTRY ================= -->
+        <mxCell id="s_sentry" value="Sentry — error tracking&#xa;client observability.js  +  server _observability.js&#xa;(PII / replay disabled for K-6 audience)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontColor=#4b2e63;" vertex="1" parent="1">
+          <mxGeometry x="540" y="870" width="460" height="90" as="geometry" />
+        </mxCell>
+
+        <!-- ================= EDGES ================= -->
+        <!-- surfaces host the JS logic -->
+        <mxCell id="e_web_js" value="hosts" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.3;exitY=1;exitDx=0;exitDy=0;entryX=0.2;entryY=0;entryDx=0;entryDy=0;strokeColor=#6c8ebf;fontColor=#1a3c66;" edge="1" parent="1" source="c_web" target="c_js">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_and_js" value="hosts" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeColor=#6c8ebf;fontColor=#1a3c66;" edge="1" parent="1" source="c_and" target="c_js">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- JS <-> storage -->
+        <mxCell id="e_js_store" value="read / write" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;startArrow=classic;startFill=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#82b366;fontColor=#205520;" edge="1" parent="1" source="c_js" target="c_store">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- JS -> backend endpoints -->
+        <mxCell id="e_js_gen" value="POST" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.1;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="c_js" target="b_gen">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_js_speak" value="POST" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.3;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="c_js" target="b_speak">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_js_token" value="GET token" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="c_js" target="b_token">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_js_health" value="GET" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.7;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="c_js" target="b_health">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_js_err" value="POST errors" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.85;exitY=1;exitDx=0;exitDy=0;entryX=0.4;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="c_js" target="b_err">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- backend -> gemini -->
+        <mxCell id="e_gen_text" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.45;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="b_gen" target="g_text">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_speak_tts" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.4;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="b_speak" target="g_tts">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- server errors -> sentry -->
+        <mxCell id="e_err_sentry" value="server" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.85;entryY=0;entryDx=0;entryDy=0;strokeColor=#9673a6;fontColor=#4b2e63;" edge="1" parent="1" source="b_err" target="s_sentry">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="942" y="620" />
+              <mxPoint x="932" y="620" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <!-- client errors -> sentry (routed down far-left margin) -->
+        <mxCell id="e_js_sentry" value="client" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=0.1;entryY=0;entryDx=0;entryDy=0;strokeColor=#9673a6;fontColor=#4b2e63;" edge="1" parent="1" source="c_js" target="s_sentry">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="25" y="343" />
+              <mxPoint x="25" y="845" />
+              <mxPoint x="586" y="845" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- direct WebSocket: client JS -> gemini live (animated, routed right corridor x=1120) -->
+        <mxCell id="e_js_live" value="WebSocket (direct) — audio in / audio out&#xa;via signed URL from /api/ai/live-token" style="edgeStyle=orthogonalEdgeStyle;flowAnimation=1;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.95;exitY=1;exitDx=0;exitDy=0;entryX=0.17;entryY=0;entryDx=0;entryDy=0;strokeColor=#9673a6;strokeWidth=2;fontColor=#4b2e63;" edge="1" parent="1" source="c_js" target="g_live">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1120" y="430" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Legend -->
+        <mxCell id="legend" value="Legend:  blue = client   yellow/orange = Vercel API + Google Gemini   green = local storage   purple = observability   dashed grey = stub   ✦ animated edge = real-time voice WebSocket" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="40" y="975" width="1300" height="20" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

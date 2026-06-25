@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="drawio" version="26.0.0">
+  <diagram name="Ollie-Safety-Pipeline">
+    <mxGraphModel dx="1500" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1740" pageHeight="740" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- Title -->
+        <mxCell id="title" value="Ollie — Content-Safety Pipeline  (as-built + recommended gaps)" style="text;html=1;align=left;verticalAlign=middle;fontSize=20;fontStyle=1;fontColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="40" y="20" width="900" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="band_built" value="IMPLEMENTED TODAY (solid)" style="text;html=1;align=left;verticalAlign=middle;fontSize=12;fontStyle=2;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="40" y="352" width="300" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="band_gap" value="RECOMMENDED — NOT IMPLEMENTED (dashed red)" style="text;html=1;align=left;verticalAlign=middle;fontSize=12;fontStyle=2;fontColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="40" y="115" width="380" height="20" as="geometry" />
+        </mxCell>
+
+        <!-- ===== Recommended gap boxes (top, dashed red) ===== -->
+        <mxCell id="g_input" value="RECOMMENDED (not built)&#xa;Input blocklist / allowlist&#xa;validator before send" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fbe4e3;strokeColor=#b85450;dashed=1;fontColor=#9c2d28;" vertex="1" parent="1">
+          <mxGeometry x="270" y="140" width="200" height="85" as="geometry" />
+        </mxCell>
+        <mxCell id="g_topic" value="RECOMMENDED (not built)&#xa;Hard STEAM-topic&#xa;classifier / gate" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fbe4e3;strokeColor=#b85450;dashed=1;fontColor=#9c2d28;" vertex="1" parent="1">
+          <mxGeometry x="500" y="140" width="200" height="85" as="geometry" />
+        </mxCell>
+        <mxCell id="g_block" value="RECOMMENDED (not built)&#xa;blockReason handler →&#xa;safe fallback message" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fbe4e3;strokeColor=#b85450;dashed=1;fontColor=#9c2d28;" vertex="1" parent="1">
+          <mxGeometry x="990" y="140" width="200" height="85" as="geometry" />
+        </mxCell>
+        <mxCell id="g_output" value="RECOMMENDED (not built)&#xa;Output moderation&#xa;before render / TTS" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fbe4e3;strokeColor=#b85450;dashed=1;fontColor=#9c2d28;" vertex="1" parent="1">
+          <mxGeometry x="1240" y="140" width="200" height="85" as="geometry" />
+        </mxCell>
+
+        <!-- ===== Soft control (system prompt) ===== -->
+        <mxCell id="sys_prompt" value="System prompt rule:&#xa;“stay on educational topics”&#xa;⚠ SOFT — model may ignore" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#7a5b00;" vertex="1" parent="1">
+          <mxGeometry x="745" y="250" width="200" height="90" as="geometry" />
+        </mxCell>
+
+        <!-- ===== Main flow (solid, left to right) ===== -->
+        <mxCell id="in" value="Child input&#xa;🎤 mic transcript&#xa;/ typed text" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="40" y="385" width="180" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="req" value="Frontend sends request&#xa;⚠ NO input filter&#xa;(raw text / transcript)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="270" y="385" width="200" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="be_gen" value="/api/ai/generate injects&#xa;safetySettings: BLOCK_LOW_AND_ABOVE ×4&#xa;(harassment · hate · sexual · dangerous)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="500" y="385" width="210" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="gemini" value="Google Gemini&#xa;applies safety →&#xa;response (may carry blockReason)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe0b3;strokeColor=#d79b00;fontColor=#7a3b00;" vertex="1" parent="1">
+          <mxGeometry x="745" y="385" width="200" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="be_extract" value="Backend extracts&#xa;candidates[0]…text&#xa;⚠ blockReason NOT checked" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="990" y="385" width="200" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="fe_render" value="Frontend render esc() / fmt()&#xa;HTML-escape + markdown only&#xa;⚠ no output moderation" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="1240" y="385" width="200" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="out" value="Display + TTS&#xa;to child" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#205520;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="1490" y="385" width="170" height="90" as="geometry" />
+        </mxCell>
+
+        <!-- ===== Passive subject detection (side branch, not a gate) ===== -->
+        <mxCell id="detect" value="Passive _detectSubject()&#xa;→ Progress tracking only&#xa;(NOT a safety gate)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#205520;" vertex="1" parent="1">
+          <mxGeometry x="990" y="555" width="200" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- ===================== EDGES ===================== -->
+        <!-- main solid flow -->
+        <mxCell id="s1" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeWidth=2;" edge="1" parent="1" source="in" target="req">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="s2" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeWidth=2;" edge="1" parent="1" source="req" target="be_gen">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="s3" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeWidth=2;" edge="1" parent="1" source="be_gen" target="gemini">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="s4" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeWidth=2;" edge="1" parent="1" source="gemini" target="be_extract">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="s5" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeWidth=2;" edge="1" parent="1" source="be_extract" target="fe_render">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="s6" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeWidth=2;" edge="1" parent="1" source="fe_render" target="out">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- soft system prompt -> gemini (sent with request) -->
+        <mxCell id="s_sys" value="sent with request (soft)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeColor=#d6b656;fontColor=#7a5b00;fontSize=10;" edge="1" parent="1" source="sys_prompt" target="gemini">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- passive subject detection branch -->
+        <mxCell id="s_det" value="classify (progress only)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeColor=#82b366;fontColor=#205520;fontSize=10;" edge="1" parent="1" source="be_extract" target="detect">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- recommended dashed-red insertions -->
+        <mxCell id="r_input" value="missing" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;dashed=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeColor=#b85450;dashPattern=6 6;fontColor=#9c2d28;fontSize=10;endArrow=block;" edge="1" parent="1" source="g_input" target="req">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="r_topic" value="missing" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;dashed=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeColor=#b85450;dashPattern=6 6;fontColor=#9c2d28;fontSize=10;endArrow=block;" edge="1" parent="1" source="g_topic" target="be_gen">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="r_block" value="missing" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;dashed=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeColor=#b85450;dashPattern=6 6;fontColor=#9c2d28;fontSize=10;endArrow=block;" edge="1" parent="1" source="g_block" target="be_extract">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="r_output" value="missing" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;dashed=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeColor=#b85450;dashPattern=6 6;fontColor=#9c2d28;fontSize=10;endArrow=block;" edge="1" parent="1" source="g_output" target="fe_render">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Legend -->
+        <mxCell id="legend3" value="Legend:  solid arrows = data flow implemented today  ·  ⚠ = safety gap in current code  ·  red dashed boxes/arrows = RECOMMENDED controls, not yet implemented  ·  soft = prompt-level guidance the model can ignore" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="40" y="680" width="1500" height="20" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
