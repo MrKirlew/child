@@ -103,12 +103,14 @@ Legend — Status: ✅ closed · 🟡 in progress · 🔴 open · ⚖️ needs l
 
 ---
 
-## 8. Open-item summary (drives the epic #3)
+## 8. Progress summary (drives the epic #3)
 
-- **Phase 1 (docs):** C1, C3, S5, G1, G5, G6 — this round.
-- **Phase 2 (safety):** issue #2 — safety filtering all paths.
-- **Phase 3 (voice/security):** C5, C9, H1, H2.
-- **Phase 4 (consent):** C2, C8, G3.
-- **Phase 5 (deletion/minimize):** C6, C7, S3, H3.
-- **Phase 6 (a11y/AI):** A1–A4, G8.
+- ✅ **Phase 1 (docs) — DONE** (`17e15cb`): C1, C3, S5, G1, G5, G6. Register + accurate privacy policy + ToS + DPIA + COPPA notice + legal handoff.
+- ✅ **Phase 2 (safety) — DONE** (`18ea1e4`, issue #2): safetySettings on all 3 AI paths, blockReason handling, blocklist + output moderation, 29 tests.
+- 🔴 **Phase 3 (voice/security) — OPEN:** C5, C9, H1, H2. Live-voice key exposure + CORS. *Needs deploy-and-test-on-device.*
+- 🔴 **Phase 4 (consent) — OPEN (blocked):** C2, C8, G3. *Needs Resend + Upstash accounts/keys from owner.*
+- ✅ **Phase 5 (deletion/minimize) — DONE** (`a6feb4c`): C6, C7, S3, H3(self-host fonts + delete-all + default-PIN removal). H3 Stripe file = **owner action**.
+- ✅ **Phase 6 (a11y/AI) — DONE** (`ad2ffbb`): A1–A4, G8.
 - **⚖️ To counsel:** C2, C4, C5, S6, G2, G5 + all §6. See [`LEGAL_HANDOFF.md`](./LEGAL_HANDOFF.md).
+
+**Owner actions still required:** (1) secure `stripe_backup_code.txt`; (2) provide Resend + Upstash keys for Phase 4; (3) deploy to device to test Phase 3; (4) fill `[TBD]` legal entity/address; (5) engage counsel / Safe Harbor.
