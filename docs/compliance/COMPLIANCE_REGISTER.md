@@ -47,7 +47,7 @@ Legend — Status: ✅ closed · 🟡 in progress · 🔴 open · ⚖️ needs l
 | C6 | Data retention limits + secure deletion | 🔴→🟡 | Add true "delete all data"; document retention; **⚖️** Google/Sentry retention we don't control | Phase 5 |
 | C7 | Parental right to review/delete/revoke | 🟡 | Dashboard review exists; add real delete-all + revoke-consent | Phase 5 |
 | C8 | Keep consent records | 🔴 | Consent-record store `{hashed_email, ts, ip, policy_version}` | Phase 4 |
-| C9 | Reasonable security | 🟡 | **Fix API-key exposure** to browser (Live token) | Phase 3 |
+| C9 | Reasonable security | ✅ | Live-token API-key exposure FIXED (ephemeral tokens) — `2de0b62`, deployed | Phase 3 |
 | C10 | No conditioning participation on more data than needed | ✅ | Data-minimized; device-only progress | — |
 
 ## 3. State Age-Appropriate Design Codes (CA, MD, NE, VT, SC) + CCPA/CPRA
@@ -95,8 +95,8 @@ Legend — Status: ✅ closed · 🟡 in progress · 🔴 open · ⚖️ needs l
 
 | # | Item | Status | Action |
 |---|---|---|---|
-| H1 | Google API key exposed to browser (Live token) | 🔴 | Ephemeral token / WS proxy (Phase 3) |
-| H2 | CORS `*` on API | 🔴 | Restrict to app origin |
+| H1 | Google API key exposed to browser (Live token) | ✅ | FIXED (`2de0b62`): mint short-lived ephemeral token server-side; raw key never sent. Verified on prod + device. |
+| H2 | CORS `*` on API (live-token) | ✅ | live-token gated to app origins (localhost/null/capacitor/vercel/ollietutor); 403 for unknown browser origins. Other endpoints still `*` — follow-up. |
 | H3 | `stripe_backup_code.txt` (real Stripe recovery code) at repo root | 🔴 | **User action:** delete from disk, move to password manager |
 | H4 | `server/.env` live key on disk | 🟡 | Gitignored ✅; confirm not shipped |
 | H5 | No child content in logs/Sentry | ✅ | `sendDefaultPii:false`; verify `/api/errors` callers |
@@ -107,10 +107,10 @@ Legend — Status: ✅ closed · 🟡 in progress · 🔴 open · ⚖️ needs l
 
 - ✅ **Phase 1 (docs) — DONE** (`17e15cb`): C1, C3, S5, G1, G5, G6. Register + accurate privacy policy + ToS + DPIA + COPPA notice + legal handoff.
 - ✅ **Phase 2 (safety) — DONE** (`18ea1e4`, issue #2): safetySettings on all 3 AI paths, blockReason handling, blocklist + output moderation, 29 tests.
-- 🔴 **Phase 3 (voice/security) — OPEN:** C5, C9, H1, H2. Live-voice key exposure + CORS. *Needs deploy-and-test-on-device.*
+- 🟡 **Phase 3 (voice/security) — KEY FIX DONE** (`2de0b62`, deployed to prod + verified on-device): H1, H2, C9 closed (ephemeral tokens, CORS gated). Remaining: consent-gate the live mic (depends on Phase 4).
 - 🔴 **Phase 4 (consent) — OPEN (blocked):** C2, C8, G3. *Needs Resend + Upstash accounts/keys from owner.*
 - ✅ **Phase 5 (deletion/minimize) — DONE** (`a6feb4c`): C6, C7, S3, H3(self-host fonts + delete-all + default-PIN removal). H3 Stripe file = **owner action**.
 - ✅ **Phase 6 (a11y/AI) — DONE** (`ad2ffbb`): A1–A4, G8.
 - **⚖️ To counsel:** C2, C4, C5, S6, G2, G5 + all §6. See [`LEGAL_HANDOFF.md`](./LEGAL_HANDOFF.md).
 
-**Owner actions still required:** (1) secure `stripe_backup_code.txt`; (2) provide Resend + Upstash keys for Phase 4; (3) deploy to device to test Phase 3; (4) fill `[TBD]` legal entity/address; (5) engage counsel / Safe Harbor.
+**Owner actions still required:** (1) delete `stripe_backup_code.txt` from disk (now gitignored so it won't commit/upload, but still a plaintext secret on the machine); (2) provide Resend + Upstash keys for Phase 4; (3) fill `[TBD]` legal entity/address in privacy.html/terms.html/coppa-direct-notice.md; (4) engage children's-privacy counsel / COPPA Safe Harbor. *Note: production now serves from the `ollie` Vercel project → `www.ollietutor.com` (+ `forthechild.vercel.app`). Consider updating `www.index.html` AI_PROXY to `ollietutor.com` eventually.*
