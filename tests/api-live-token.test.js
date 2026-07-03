@@ -39,7 +39,7 @@ describe('API /ai/live-token — ephemeral token minting', () => {
 
   it('allows the native app origin and the Vercel domain', async () => {
     global.fetch = vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ name: 'auth_tokens/X' }) }));
-    for (const origin of ['http://localhost', 'https://forthechild.vercel.app', undefined]) {
+    for (const origin of ['http://localhost', 'https://forthechild.vercel.app', undefined, 'null']) {
       const res = mockRes();
       await handler(mockReq('POST', origin), res);
       expect(res.body.url, `origin=${origin}`).toContain('access_token=');

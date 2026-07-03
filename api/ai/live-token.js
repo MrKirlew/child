@@ -21,7 +21,7 @@ const ALLOWED = new Set([
   'capacitor://localhost', 'ionic://localhost',
 ]);
 function originAllowed(origin) {
-  if (!origin) return true;                                   // native app / same-origin (no Origin header)
+  if (!origin || origin === 'null') return true;              // native app / opaque WebView context (no/opaque Origin)
   if (ALLOWED.has(origin)) return true;
   if (/^https?:\/\/localhost(:\d+)?$/.test(origin)) return true;   // local dev, any port
   if (/^https:\/\/[a-z0-9-]+\.vercel\.app$/.test(origin)) return true; // preview deploys
