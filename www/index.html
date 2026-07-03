@@ -20,6 +20,7 @@
 </script>
 </head>
 <body>
+<a href="#linp" class="skip-link">Skip to message box</a>
 <div id="app">
   <div id="hdr">
     <h1>🐙 Ollie</h1>
@@ -38,7 +39,7 @@
           <div id="oz">
             <div id="lr"></div>
             <div id="ow" class="owl-i">
-              <svg id="osv" viewBox="0 0 82 88" xmlns="http://www.w3.org/2000/svg">
+              <svg id="osv" viewBox="0 0 82 88" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Ollie the octopus">
                 <!-- Ollie the octopus — ids osv/el/er/bc/bo kept so VIZ blink/beak/bob animations work unchanged -->
                 <g id="tents">
                   <path d="M16 50 Q7 67 13 83" stroke="#573BB0" stroke-width="7" fill="none" stroke-linecap="round"/>
@@ -72,8 +73,8 @@
             <div id="slbl">Tap 🎤 to talk to Ollie</div>
           </div>
         </div>
-        <div id="vcw"><canvas id="vc"></canvas></div>
-        <div id="vlbl">🎵 AUDIO VISUALIZER</div>
+        <div id="vcw" aria-hidden="true"><canvas id="vc"></canvas></div>
+        <div id="vlbl" aria-hidden="true">🎵 AUDIO VISUALIZER</div>
       </div>
       <div id="chat" aria-live="polite"><div id="cscroll"></div></div>
       <div id="lbot">
@@ -261,8 +262,9 @@
 
 <div id="toast-rail" aria-live="polite" aria-atomic="true"></div>
 
-<div class="ov" id="ov-coppa" style="z-index:9999"><div class="sheet" style="max-width:380px"><div class="sh"></div>
+<div class="ov" id="ov-coppa" style="z-index:9999" role="dialog" aria-modal="true" aria-label="Parental consent"><div class="sheet" style="max-width:380px"><div class="sh"></div>
   <div class="st2">👋 Welcome to Ollie!</div>
+  <p style="font-size:11px;color:var(--muted);margin:0 0 4px">🤖 Ollie is an AI helper (powered by Google Gemini), not a real person, and can sometimes be wrong.</p>
   <div style="font-size:12px;color:var(--muted);line-height:1.6;margin:8px 0;text-align:left">
     <p>A parent or guardian must consent before this app can be used.</p>
     <p><strong>What we do:</strong> Voice input is transcribed on your device and sent to Google AI to generate tutoring responses. No child names or personal data are stored on our servers.</p>
@@ -423,5 +425,6 @@ const VIZ=(()=>{
 <script src="js/exercises.js"></script>
 <script src="js/progress.js"></script>
 <script src="js/ui.js"></script>
+<script src="js/a11y.js"></script>
 </body>
 </html>

@@ -350,6 +350,13 @@ body.mode-night #rstbtn{background:rgba(248,113,113,.06);border-color:rgba(248,1
 *:focus-visible{outline:2px solid var(--p1);outline-offset:2px;border-radius:4px}
 button:focus-visible{outline:2px solid var(--p1);outline-offset:2px}
 
+/* Screen-reader-only utility */
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+
+/* Skip link — visible only on keyboard focus */
+.skip-link{position:absolute;left:8px;top:-48px;z-index:10000;background:var(--purple,#6C4BD6);color:#fff;padding:8px 14px;border-radius:10px;font-weight:800;text-decoration:none;transition:top .15s ease}
+.skip-link:focus{top:8px}
+
 /* Countdown ring — used on every mic surface to show the 60s talk window */
 .mic-stage{position:relative;display:inline-flex;align-items:center;justify-content:center;transition:transform .25s ease}
 .mic-stage.active{transform:scale(1.08)}
