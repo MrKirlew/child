@@ -269,12 +269,20 @@
     <p>A parent or guardian must consent before this app can be used.</p>
     <p><strong>What we do:</strong> Voice input is transcribed on your device and sent to Google AI to generate tutoring responses. No child names or personal data are stored on our servers.</p>
     <p><strong>What we don't do:</strong> We do not collect, share, or sell any personal information to third parties.</p>
-    <p>By continuing, you confirm you are a parent/guardian and agree to our <a href="privacy.html" target="_blank" style="color:var(--p1)">Privacy Policy</a>.</p>
+    <p>By continuing, you confirm you are a parent/guardian and agree to our <a href="privacy.html" target="_blank" style="color:var(--p1)">Privacy Policy</a> and <a href="terms.html" target="_blank" style="color:var(--p1)">Terms</a>.</p>
   </div>
-  <label style="display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;color:var(--text);margin:10px 0;cursor:pointer">
-    <input type="checkbox" id="coppa-chk"/> I am the parent/guardian and I consent
-  </label>
-  <button class="sbt" id="coppa-btn" onclick="acceptCoppa()" disabled style="opacity:.5">Continue</button>
+  <div id="coppa-step1">
+    <p style="font-size:12px;font-weight:700;color:var(--text);margin:10px 0 6px">A parent or guardian must verify by email to continue.</p>
+    <input type="email" id="coppa-email" class="si" inputmode="email" autocomplete="email" aria-label="Parent's email address" placeholder="Parent's email address" style="width:100%;margin-bottom:8px"/>
+    <button class="sbt" id="coppa-send" onclick="requestConsentCode()">Email me a code</button>
+  </div>
+  <div id="coppa-step2" style="display:none">
+    <p style="font-size:12px;color:var(--muted);margin:10px 0 6px">Enter the 6-digit code we emailed to <strong id="coppa-email-lbl"></strong>.</p>
+    <input id="coppa-code" class="si" inputmode="numeric" maxlength="6" autocomplete="one-time-code" aria-label="6-digit verification code" placeholder="______" style="width:100%;text-align:center;letter-spacing:6px;margin-bottom:8px"/>
+    <button class="sbt" id="coppa-verify" onclick="verifyConsentCode()">Verify &amp; continue</button>
+    <button class="sbt sc" onclick="coppaBackToEmail()" style="margin-top:6px">Use a different email</button>
+  </div>
+  <div class="pe" id="coppa-err" style="margin-top:8px"></div>
 </div></div>
 
 <!-- State, constants, and utilities — loaded first as foundation for all modules -->
@@ -333,7 +341,8 @@ let S={
   cnt:{Spelling:0,Grammar:0,Comprehension:0,Astrology:0,Geology:0,Biology:0,Science:0,Technology:0,Engineering:0,Math:0,MathSkills:{Counting:0,Adding:0,Subtracting:0,Multiplying:0,Dividing:0}},
   ex:{Spelling:{c:0,t:0},Grammar:{c:0,t:0},Comprehension:{c:0,t:0},Astrology:{c:0,t:0},Geology:{c:0,t:0},Biology:{c:0,t:0},Science:{c:0,t:0},Technology:{c:0,t:0},Engineering:{c:0,t:0},Math:{c:0,t:0}},
   streak:0,bestStreak:0,totalEx:0,
-  earnedBadges:[],recentEx:[],recentQ:[],lastQuestions:[],lastActiveAt:null,dailyCnt:{},_wrongStreak:{},_toastShown:{},chatHist:[],busy:false
+  earnedBadges:[],recentEx:[],recentQ:[],lastQuestions:[],lastActiveAt:null,dailyCnt:{},_wrongStreak:{},_toastShown:{},chatHist:[],busy:false,
+  consentToken:null,consentAt:null,consentPolicy:null
 };
 function saveS(){try{const {chatHist,busy,...r}=S;localStorage.setItem('kai5',JSON.stringify(r));}catch(e){}} // eslint-disable-line no-empty -- storage quota
 function loadS(){try{const d=localStorage.getItem('kai5');if(d)Object.assign(S,JSON.parse(d));}catch(e){}} // eslint-disable-line no-empty -- corrupt storage

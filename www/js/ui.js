@@ -294,6 +294,13 @@ async function saveChgPin() {
 // the consent gate reappears (revocation). Nothing was stored on our servers.
 function deleteAllData() {
   if (!confirm('Delete ALL of your child’s data on this device — progress, spelled words, settings, and PIN? This cannot be undone.')) return;
+  // Revoke the server-side consent record too, if we have a token (fire-and-forget; keepalive survives the reload).
+  try {
+    const token = S && S.consentToken;
+    if (token && window.AI_PROXY) {
+      fetch(window.AI_PROXY + '/consent/revoke', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token }), keepalive: true }).catch(() => {});
+    }
+  } catch (_e) { /* noop */ }
   try { localStorage.removeItem('kai5'); } catch (_e) { /* noop */ }
   try { localStorage.removeItem('kai5_spell'); } catch (_e) { /* noop */ }
   try { sessionStorage.clear(); } catch (_e) { /* noop */ }
@@ -588,11 +595,46 @@ function _renderSpellHistory() {
   }
 }
 
-/* ══ COPPA CONSENT ══ */
-document.getElementById('coppa-chk').addEventListener('change', function () {
-  const btn = document.getElementById('coppa-btn'); btn.disabled = !this.checked; btn.style.opacity = this.checked ? '1' : '.5';
-});
-function acceptCoppa() { if (!document.getElementById('coppa-chk').checked) return; S.coppaConsent = true; saveS(); document.getElementById('ov-coppa').classList.remove('open'); startApp(); }
+/* ══ COPPA CONSENT — email-plus verifiable parental consent ══ */
+let _consentEmail = '';
+async function requestConsentCode() {
+  const email = (document.getElementById('coppa-email').value || '').trim();
+  const errEl = document.getElementById('coppa-err'); errEl.textContent = '';
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { errEl.textContent = 'Please enter a valid email address.'; return; }
+  const btn = document.getElementById('coppa-send'); const label = btn.textContent; btn.disabled = true; btn.textContent = 'Sending…';
+  try {
+    const r = await fetch(window.AI_PROXY + '/consent/request', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email }) });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(d.error || 'Could not send the code.');
+    _consentEmail = email;
+    document.getElementById('coppa-email-lbl').textContent = email;
+    document.getElementById('coppa-step1').style.display = 'none';
+    document.getElementById('coppa-step2').style.display = 'block';
+    document.getElementById('coppa-code').focus();
+  } catch (e) { errEl.textContent = e.message; }
+  finally { btn.disabled = false; btn.textContent = label; }
+}
+async function verifyConsentCode() {
+  const code = (document.getElementById('coppa-code').value || '').trim();
+  const errEl = document.getElementById('coppa-err'); errEl.textContent = '';
+  if (!/^\d{6}$/.test(code)) { errEl.textContent = 'Enter the 6-digit code we emailed you.'; return; }
+  const btn = document.getElementById('coppa-verify'); const label = btn.textContent; btn.disabled = true; btn.textContent = 'Verifying…';
+  try {
+    const r = await fetch(window.AI_PROXY + '/consent/verify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: _consentEmail, code }) });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok || !d.consented) throw new Error(d.error || 'Verification failed. Please try again.');
+    S.coppaConsent = true; S.consentToken = d.token || null; S.consentAt = new Date().toISOString(); S.consentPolicy = d.policyVersion || null;
+    saveS();
+    document.getElementById('ov-coppa').classList.remove('open');
+    startApp();
+  } catch (e) { errEl.textContent = e.message; }
+  finally { btn.disabled = false; btn.textContent = label; }
+}
+function coppaBackToEmail() {
+  document.getElementById('coppa-step2').style.display = 'none';
+  document.getElementById('coppa-step1').style.display = 'block';
+  document.getElementById('coppa-err').textContent = '';
+}
 
 /* ══ INIT ══ */
 async function startApp() {

@@ -1,4 +1,5 @@
 const { withSentry } = require('../_observability');
+const { applyCors } = require('../_cors');
 
 // Live-voice auth. The raw GOOGLE_AI_KEY MUST NOT reach the browser. Instead we
 // mint a short-lived, single-use EPHEMERAL TOKEN server-side and hand the client
@@ -11,35 +12,12 @@ const { withSentry } = require('../_observability');
 const TOKEN_ENDPOINT = 'https://generativelanguage.googleapis.com/v1alpha/auth_tokens';
 const WS_BASE = 'wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContentConstrained';
 
-// Only the app's own origins may mint tokens (defense against quota abuse from
-// random sites). Native Capacitor WebViews use http(s)://localhost or send no
-// Origin; the web app uses the Vercel domain / a future custom domain.
-const ALLOWED = new Set([
-  'https://forthechild.vercel.app',
-  'https://ollietutor.com', 'https://www.ollietutor.com',
-  'http://localhost', 'https://localhost',
-  'capacitor://localhost', 'ionic://localhost',
-]);
-function originAllowed(origin) {
-  if (!origin || origin === 'null') return true;              // native app / opaque WebView context (no/opaque Origin)
-  if (ALLOWED.has(origin)) return true;
-  if (/^https?:\/\/localhost(:\d+)?$/.test(origin)) return true;   // local dev, any port
-  if (/^https:\/\/[a-z0-9-]+\.vercel\.app$/.test(origin)) return true; // preview deploys
-  return false;
-}
-
 const handler = async (req, res) => {
-  const origin = (req.headers && req.headers.origin) || '';
-  const allowed = originAllowed(origin);
-  res.setHeader('Access-Control-Allow-Origin', origin || '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  res.setHeader('Vary', 'Origin');
-
-  if (req.method === 'OPTIONS') return res.status(200).end();
+  const { allowed, handled } = applyCors(req, res);
+  if (handled) return;
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
   if (!allowed) {
-    console.warn(JSON.stringify({ ts: new Date().toISOString(), level: 'warn', event: 'live-token.origin_blocked', origin }));
+    console.warn(JSON.stringify({ ts: new Date().toISOString(), level: 'warn', event: 'live-token.origin_blocked' }));
     return res.status(403).json({ error: 'Origin not allowed' });
   }
 
@@ -50,7 +28,6 @@ const handler = async (req, res) => {
     const r = await fetch(`${TOKEN_ENDPOINT}?key=${API_KEY.trim()}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      // Single-use token for one new session; rely on Google's default expiry.
       body: JSON.stringify({ uses: 1 }),
     });
     const data = await r.json();
@@ -61,7 +38,7 @@ const handler = async (req, res) => {
     const wsUrl = `${WS_BASE}?access_token=${encodeURIComponent(data.name)}`;
     return res.json({ url: wsUrl });
   } catch (e) {
-    console.error(JSON.stringify({ ts: new Date().toISOString(), level: 'error', event: 'live-token.mint_error', err: String(e && e.message || e) }));
+    console.error(JSON.stringify({ ts: new Date().toISOString(), level: 'error', event: 'live-token.mint_error', err: String((e && e.message) || e) }));
     return res.status(502).json({ error: 'Could not start voice session. Please try again.' });
   }
 };
