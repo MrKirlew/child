@@ -9,7 +9,7 @@
 <title>Ollie — STEAM Reading Buddy</title>
 <link rel="manifest" href="manifest.json"/>
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png"/>
-<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="fonts/fonts.css"/>
 <link rel="stylesheet" href="css/main.css"/>
 <script>
   if ('serviceWorker' in navigator) {
@@ -203,7 +203,6 @@
   <input class="pin" id="pin-inp" type="password" maxlength="4" placeholder="····" oninput="this.value=this.value.replace(/\D/g,'')"/>
   <div class="pe" id="pin-err"></div>
   <button class="sbt" onclick="chkPin()">Enter</button>
-  <p style="text-align:center;font-size:10px;color:var(--muted);margin-top:7px">Default PIN: 1234</p>
 </div></div>
 
 <div class="ov" id="ov-dash" role="dialog" aria-modal="true" aria-label="Parent dashboard"><div class="sheet"><div class="sh"></div>
@@ -239,12 +238,13 @@
   <div id="d-math"></div>
   <div class="sep"></div>
   <button class="sbt sc" onclick="openChgPin()" style="margin-bottom:6px">🔒 Change PIN</button>
+  <button class="sbt sc" onclick="deleteAllData()" style="margin-bottom:6px;color:#B91C1C;border-color:#FCA5A5">🗑️ Delete all data</button>
   <button class="sbt sc" onclick="closeAll()">Close</button>
 </div></div>
 
 <div class="ov" id="ov-chpin" role="dialog" aria-modal="true" aria-label="Change PIN"><div class="sheet"><div class="sh"></div>
   <button class="cx" onclick="closeAll()">✕</button>
-  <div class="st2">🔒 Change PIN</div>
+  <div class="st2" id="chpin-title">🔒 Change PIN</div>
   <input class="pin" id="p1" type="password" maxlength="4" placeholder="New PIN" oninput="this.value=this.value.replace(/\D/g,'')"/>
   <input class="pin" id="p2" type="password" maxlength="4" placeholder="Confirm PIN" oninput="this.value=this.value.replace(/\D/g,'')"/>
   <div class="pe" id="chpe"></div>
@@ -347,11 +347,8 @@ async function hashPin(pin){
   if(!S.pin||S.pin.length===64)return; // already hashed or empty
   S.pin=await hashPin(S.pin);saveS();
 })();
-// Set default hashed PIN if none exists
-(async function ensureDefaultPin(){
-  if(S.pin)return;
-  S.pin=await hashPin('1234');saveS();
-})();
+// No default PIN is shipped. On first parent-area access with no PIN set,
+// the parent is prompted to CREATE one (see openPin/openChgPin in ui.js).
 
 /* ══ UTILITIES ══ */
 function esc(t){return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}

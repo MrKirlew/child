@@ -17,7 +17,11 @@ function closeAll() {
   document.querySelectorAll('.ov').forEach(o => o.classList.remove('open'));
 }
 function openGrade() { document.querySelectorAll('#gpr .pl').forEach(e => e.classList.toggle('on', e.dataset.g === S.grade)); document.getElementById('ov-grade').classList.add('open'); }
-function openPin() { document.getElementById('pin-inp').value = ''; document.getElementById('pin-err').textContent = ''; document.getElementById('ov-pin').classList.add('open'); }
+// First parent-area access with no PIN set → prompt to CREATE a PIN (no shipped default).
+function openPin() {
+  if (!S.pin) { openChgPin(true); return; }
+  document.getElementById('pin-inp').value = ''; document.getElementById('pin-err').textContent = ''; document.getElementById('ov-pin').classList.add('open');
+}
 
 async function chkPin() {
   const entered = document.getElementById('pin-inp').value;
@@ -265,14 +269,36 @@ function showToast(text, opts) {
     else document.addEventListener('DOMContentLoaded', () => _updateHeaderStreak({}));
   }
 })();
-function openChgPin() { closeAll(); document.getElementById('p1').value = ''; document.getElementById('p2').value = ''; document.getElementById('chpe').textContent = ''; document.getElementById('ov-chpin').classList.add('open'); }
+let _firstPinSetup = false;
+function openChgPin(firstTime) {
+  closeAll();
+  _firstPinSetup = !!firstTime;
+  document.getElementById('p1').value = ''; document.getElementById('p2').value = ''; document.getElementById('chpe').textContent = '';
+  const title = document.getElementById('chpin-title');
+  if (title) title.textContent = firstTime ? '🔒 Create a Parent PIN' : '🔒 Change PIN';
+  document.getElementById('ov-chpin').classList.add('open');
+}
 
 async function saveChgPin() {
   const a = document.getElementById('p1').value, b = document.getElementById('p2').value;
   if (a.length !== 4) { document.getElementById('chpe').textContent = 'PIN must be 4 digits.'; return; }
   if (a !== b) { document.getElementById('chpe').textContent = 'PINs do not match!'; return; }
   S.pin = await hashPin(a);
-  saveS(); closeAll(); addBub('ai', 'Parent PIN updated!', {});
+  saveS(); closeAll();
+  if (_firstPinSetup) { _firstPinSetup = false; openDash(); }
+  else addBub('ai', 'Parent PIN updated!', {});
+}
+
+// COPPA/GDPR — parental right to delete. Clears ALL locally stored data
+// (progress, spelled words, settings, PIN) + session caches, then reloads so
+// the consent gate reappears (revocation). Nothing was stored on our servers.
+function deleteAllData() {
+  if (!confirm('Delete ALL of your child’s data on this device — progress, spelled words, settings, and PIN? This cannot be undone.')) return;
+  try { localStorage.removeItem('kai5'); } catch (_e) { /* noop */ }
+  try { localStorage.removeItem('kai5_spell'); } catch (_e) { /* noop */ }
+  try { sessionStorage.clear(); } catch (_e) { /* noop */ }
+  if (typeof Logger !== 'undefined') Logger.warn('data.delete_all', {});
+  location.reload();
 }
 
 /* ══ TYPED MESSAGE (Learn tab) ══ */
