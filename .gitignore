@@ -12,6 +12,7 @@
 server/.env
 *.key
 google-services.json
+stripe_backup_code.txt
 
 # --- Android Signing (NEVER commit — losing this = can never update the app) ---
 *.jks
