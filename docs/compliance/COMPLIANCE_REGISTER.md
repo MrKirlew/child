@@ -108,7 +108,7 @@ Legend — Status: ✅ closed · 🟡 in progress · 🔴 open · ⚖️ needs l
 - ✅ **Phase 1 (docs) — DONE** (`17e15cb`): C1, C3, S5, G1, G5, G6. Register + accurate privacy policy + ToS + DPIA + COPPA notice + legal handoff.
 - ✅ **Phase 2 (safety) — DONE** (`18ea1e4`, issue #2): safetySettings on all 3 AI paths, blockReason handling, blocklist + output moderation, 29 tests.
 - 🟡 **Phase 3 (voice/security) — KEY FIX DONE** (`2de0b62`, deployed to prod + verified on-device): H1, H2, C9 closed (ephemeral tokens, CORS gated). Remaining: consent-gate the live mic (depends on Phase 4).
-- 🟡 **Phase 4 (consent) — BUILT + verified** (`c78c4bf`): C2, C8, G3. Email-plus consent (Upstash store verified against live Redis; Resend send coded). **Blocked on:** owner adding `RESEND_API_KEY` + verified sender (`CONSENT_EMAIL_FROM`) to Vercel, then redeploy + app rebuild. ⚖️ counsel to confirm email-plus suffices as VPC.
+- ✅ **Phase 4 (consent) — DONE, deployed + verified on-device** (`c78c4bf` + deploy): C2, C8, G3. Email-plus consent live in production — real Resend email + Upstash store + verify, driven end-to-end on the Pixel (email → code → consent → app unlock). **For real parents:** owner must verify `ollietutor.com` in Resend + set `CONSENT_EMAIL_FROM` (currently test-mode sender only reaches the Resend account owner). ⚖️ counsel to confirm email-plus suffices as VPC.
 - ✅ **Phase 5 (deletion/minimize) — DONE** (`a6feb4c`): C6, C7, S3, H3(self-host fonts + delete-all + default-PIN removal). H3 Stripe file = **owner action**.
 - ✅ **Phase 6 (a11y/AI) — DONE** (`ad2ffbb`): A1–A4, G8.
 - **⚖️ To counsel:** C2, C4, C5, S6, G2, G5 + all §6. See [`LEGAL_HANDOFF.md`](./LEGAL_HANDOFF.md).
