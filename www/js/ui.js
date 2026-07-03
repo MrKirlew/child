@@ -1,5 +1,5 @@
 /* ══ UI ══ */
-/* globals: S, SUBS, SCOL, saveS, updProg, updScoreBar, addBub, speak, speakDirect, VIZ, hashPin, esc, sendLiveText, connectLive, sendL, aiGenerate, checkBadges, SpellTools */
+/* globals: S, SUBS, SCOL, saveS, updProg, updScoreBar, addBub, speak, speakDirect, VIZ, hashPin, esc, sendLiveText, connectLive, sendL, aiGenerate, checkBadges, SpellTools, showToast, Safety, Logger */
 
 function showTab(t) { ['learn', 'ex', 'spell', 'prog'].forEach(id => { document.getElementById('tab-' + id).classList.toggle('on', id === t); document.getElementById('tb-' + id).classList.toggle('on', id === t); }); if (t === 'prog') updProg(); }
 function setMode(m) { S.mode = m; saveS(); document.body.className = (m === 'normal' || m === 'excited') ? '' : 'mode-' + m; document.querySelectorAll('[data-mode]').forEach(e => e.classList.toggle('on', e.dataset.mode === m)); }
@@ -281,6 +281,12 @@ async function sendTyped() {
   const txt = inp.value.trim();
   if (!txt) return;
   inp.value = '';
+  // Pre-model input filter — never echo or send inappropriate input.
+  if (typeof Safety !== 'undefined' && !Safety.checkInput(txt).allowed) {
+    if (typeof Logger !== 'undefined') Logger.warn('safety.input_filtered', { path: 'typed' });
+    addBub('ai', Safety.safeNudge(), {});
+    return;
+  }
   // Typed spelling requests should use the deterministic spell flow even when
   // the Learn websocket is already warm.
   if (SpellTools.extractSpellTarget(txt)) {
@@ -417,6 +423,12 @@ async function spellWord() {
   const word = SpellTools.cleanSpellWord(inp.value);
   if (!word) return;
   inp.value = '';
+  // Pre-model input filter — don't spell/define inappropriate words.
+  if (typeof Safety !== 'undefined' && !Safety.checkInput(word).allowed) {
+    if (typeof Logger !== 'undefined') Logger.warn('safety.input_filtered', { path: 'spell' });
+    showToast(Safety.safeNudge());
+    return;
+  }
   const btn = document.getElementById('spell-btn'); btn.disabled = true;
   document.getElementById('spell-load').textContent = 'Ollie is saying it...';
   document.getElementById('spell-load').style.display = 'block';

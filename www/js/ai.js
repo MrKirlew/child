@@ -1,5 +1,5 @@
 /* ══ AI ENGINE ══ */
-/* globals: S, SUBS, GN, DN, SN, SCOL, saveS, esc, fmt, addBub, addTyp, rmTyp, reportError, speak, checkBadges, NB, VIZ, hashPin, SpellTools, lookupSpellWord, runSpellCeremony */
+/* globals: S, SUBS, GN, DN, SN, SCOL, saveS, esc, fmt, addBub, addTyp, rmTyp, reportError, speak, checkBadges, NB, VIZ, hashPin, SpellTools, lookupSpellWord, runSpellCeremony, Safety, Logger */
 
 /* ══ PROMPT CACHE (sessionStorage, 10-min TTL) ══ */
 async function _cacheKey(model, sys, user, diff) {
@@ -63,6 +63,11 @@ async function aiGenerate(prompt, systemPrompt, maxTokens) {
     })
   });
   const data = await r.json();
+  // Safety block from the proxy → kind redirect instead of a blank/error bubble.
+  if (data.blocked) {
+    if (typeof Logger !== 'undefined') Logger.warn('safety.block', { reason: data.reason, path: 'rest' });
+    return (typeof Safety !== 'undefined') ? Safety.safeRedirect() : "Let's talk about something fun instead! Want to try a science question?";
+  }
   if (data.error) { reportError('api', data.error.message || JSON.stringify(data.error), 'aiGenerate'); throw new Error(data.error.message || data.error); }
 
   // Track token usage
@@ -180,8 +185,13 @@ async function callAI(userMsg, hist) {
     if (!raw || !raw.trim()) throw new Error('Empty AI response');
     let p; try { p = JSON.parse(raw.replace(/```json|```/g, '').trim()); } catch (_e) { p = { message: raw, phonics: [], passage: '', lessonType: 'Teaching', detectedSubject: 'Comprehension' }; }
     rmTyp();
-    const msg = p.message || raw;
+    let msg = p.message || raw;
     if (!msg || !msg.trim()) throw new Error('Empty message in AI response');
+    // Output moderation (defense-in-depth around Gemini safetySettings).
+    if (typeof Safety !== 'undefined' && !Safety.checkOutput(msg).safe) {
+      if (typeof Logger !== 'undefined') Logger.warn('safety.output_filtered', { path: 'rest' });
+      msg = Safety.safeRedirect();
+    }
     rememberConversationTurn('assistant', msg);
     const el = addBub('ai', msg, p); speak(msg, el);
     const detSub = (p.detectedSubject && SUBS.includes(p.detectedSubject)) ? p.detectedSubject : 'Comprehension';

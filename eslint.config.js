@@ -55,7 +55,7 @@ module.exports = [
         setMode: 'readonly',
         openStreakHistory: 'readonly', showToast: 'readonly',
         // Observability + logger globals (defined by observability.js / logger.js)
-        Sentry: 'readonly', Logger: 'readonly', progBus: 'readonly',
+        Sentry: 'readonly', Logger: 'readonly', progBus: 'readonly', Safety: 'readonly',
         // CommonJS sentinel — used by browser scripts that also export to
         // Node for unit tests via `typeof module !== 'undefined' && module.exports = ...`
         module: 'readonly',
