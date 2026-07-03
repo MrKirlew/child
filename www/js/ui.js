@@ -564,7 +564,7 @@ async function startApp() {
   setMode(S.mode || 'normal');
   // Instant readiness — no API call on startup, no waiting for Ollie to greet
   document.getElementById('slbl').textContent = 'Tap 🎤 to talk to Ollie';
-  addBub('ai', 'Hi! I\'m Ollie the Owl! Tap the 🎤 button to talk to me, or go to Exercises and Spell for fun practice!', { lessonType: 'Welcome' });
+  addBub('ai', 'Hi! I\'m Ollie the Octopus! Tap the 🎤 button to talk to me, or go to Exercises and Spell for fun practice!', { lessonType: 'Welcome' });
 }
 (function init() {
   if (S.coppaConsent) { startApp(); }

@@ -1,0 +1,218 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="drawio" version="26.0.0">
+  <diagram name="Ollie-User-Flow">
+    <mxGraphModel dx="1500" dy="1000" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1780" pageHeight="1080" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- ===== Zone backgrounds (rendered behind) ===== -->
+        <mxCell id="zone_child" value="CHILD ZONE" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#eafaf0;strokeColor=#82b366;dashed=1;verticalAlign=top;align=left;spacingLeft=12;spacingTop=8;fontStyle=1;fontColor=#2d6a2d;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="40" y="360" width="1240" height="690" as="geometry" />
+        </mxCell>
+        <mxCell id="zone_parent" value="PARENT ZONE  (PIN-gated)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f6f0fb;strokeColor=#9673a6;dashed=1;verticalAlign=top;align=left;spacingLeft=12;spacingTop=8;fontStyle=1;fontColor=#5b3a78;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="1320" y="120" width="420" height="780" as="geometry" />
+        </mxCell>
+
+        <!-- ===== Title ===== -->
+        <mxCell id="title" value="Ollie 🐙 — Child App User Flow" style="text;html=1;align=left;verticalAlign=middle;fontSize=20;fontStyle=1;fontColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="40" y="20" width="600" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- ===== Top flow ===== -->
+        <mxCell id="launch" value="App Launch" style="ellipse;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="560" y="60" width="200" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="coppa" value="COPPA consent?&#xa;parent checkbox + Continue&#xa;(acceptCoppa → startApp)" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="550" y="135" width="220" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="home" value="🏠 Home — Learn tab active&#xa;Header: Grade ▾  ·  👨‍👩‍👧 Parent" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="520" y="275" width="280" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="grade" value="Grade selector modal (K–6)&#xa;openGrade → pickGrade&#xa;(resets chat history)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="250" y="270" width="220" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="tabbar" value="Tab bar:    📚 Learn      ·      🎯 Exercises      ·      📖 Spell      ·      📊 Progress" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="60" y="390" width="1200" height="54" as="geometry" />
+        </mxCell>
+
+        <!-- ===== Learn column ===== -->
+        <mxCell id="l_hdr" value="📚 Learn" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="70" y="490" width="250" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="l_talk" value="Talk to Ollie (🐙 octopus mascot):&#xa;• 🎤 mic → Gemini Live voice conversation&#xa;• or type text (sendTyped)&#xa;→ Ollie reply: chat bubble + TTS&#xa;(mascot animates + live audio visualizer)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="55" y="570" width="280" height="120" as="geometry" />
+        </mxCell>
+
+        <!-- ===== Exercises column ===== -->
+        <mxCell id="e_hdr" value="🎯 Exercises" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="360" y="490" width="250" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="e_subj" value="Pick subject:&#xa;Comprehension · Grammar · Astrology · Geology · Biology · Engineering · Technology&#xa;Math ▸ skill (count/add/sub/mult/div)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="350" y="570" width="270" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="e_new" value="New Exercise 🎲  (newEx)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="380" y="710" width="210" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="e_types" value="Render one of:&#xa;Multiple-choice / Fill-blank / Voice-answer" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="350" y="780" width="270" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="e_check" value="Submit → check (generous; phonetic OK)&#xa;→ feedback → badges/streak" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="350" y="870" width="270" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="e_mic" value="🎤 = spoken hint only (use system keyboard mic)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;dashed=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="350" y="965" width="270" height="55" as="geometry" />
+        </mxCell>
+
+        <!-- ===== Spell column ===== -->
+        <mxCell id="s_hdr" value="📖 Spell" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="650" y="490" width="250" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="s_in" value="Type word + “Spell It!” (spellWord)&#xa;or pick from history&#xa;(🎤 = spoken hint only)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="640" y="570" width="270" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="s_cer" value="Spell ceremony:&#xa;letter clips → say whole word → definition → phonics (TTS)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="640" y="690" width="270" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="s_hist" value="Recent-words history tiles (replay / delete)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="640" y="810" width="270" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- ===== Progress column ===== -->
+        <mxCell id="p_hdr" value="📊 Progress" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="940" y="490" width="250" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="p_stats" value="Stats: total / correct / accuracy%&#xa;Streak card → 14-day history modal&#xa;Badge grid (tap → unlock hint)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="930" y="570" width="270" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="p_links" value="Tap subject bar → jump to Exercises&#xa;Tap recent activity → re-engage&#xa;(respeak / refill text / replay word)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="930" y="700" width="270" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="p_reset" value="↺ Reset Session (resetSess)&#xa;clears scores &amp; streak (confirm)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="930" y="810" width="270" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="f_p3" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="p_links" target="p_reset">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- ===== Parent zone ===== -->
+        <mxCell id="pin_gate" value="PIN correct?&#xa;openPin → chkPin&#xa;(SHA-256, default 1234)" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="1470" y="175" width="210" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="pin_err" value="Wrong → error msg" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1340" y="200" width="115" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="dash" value="Parent Dashboard (openDash)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="1360" y="350" width="320" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="dash_set" value="Settings (saved to localStorage):&#xa;• Voice tone — Normal / Excited / Calm / Night&#xa;• Difficulty — Beginner → Hard&#xa;• Listen-wait — 10–60s&#xa;• Subject performance bars&#xa;• Math-skills drilldown → routes child to Exercises" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;align=left;spacingLeft=10;" vertex="1" parent="1">
+          <mxGeometry x="1360" y="445" width="320" height="170" as="geometry" />
+        </mxCell>
+        <mxCell id="dash_pin" value="Change PIN  (openChgPin → saveChgPin)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="1360" y="650" width="320" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- ===================== EDGES ===================== -->
+        <mxCell id="f_launch_coppa" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="launch" target="coppa">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="f_coppa_home" value="accept" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;fontStyle=1;" edge="1" parent="1" source="coppa" target="home">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="f_home_grade" value="Grade ▾" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;startArrow=classic;startFill=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="home" target="grade">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="f_home_tab" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="home" target="tabbar">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- tab bar -> section headers (aligned vertical drops) -->
+        <mxCell id="f_tab_l" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.1125;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="tabbar" target="l_hdr">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="f_tab_e" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.354;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="tabbar" target="e_hdr">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="f_tab_s" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.596;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="tabbar" target="s_hdr">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="f_tab_p" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.8375;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="tabbar" target="p_hdr">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Learn chain -->
+        <mxCell id="f_l1" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="l_hdr" target="l_talk">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Exercises chain -->
+        <mxCell id="f_e1" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="e_hdr" target="e_subj">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="f_e2" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="e_subj" target="e_new">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="f_e3" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="e_new" target="e_types">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="f_e4" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="e_types" target="e_check">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="f_e_loop" value="Next / New" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;fontSize=10;strokeColor=#82b366;" edge="1" parent="1" source="e_check" target="e_new">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="330" y="910" />
+              <mxPoint x="330" y="735" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="f_e_mic" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;dashed=1;endArrow=none;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeColor=#d6b656;" edge="1" parent="1" source="e_check" target="e_mic">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Spell chain -->
+        <mxCell id="f_s1" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="s_hdr" target="s_in">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="f_s2" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="s_in" target="s_cer">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="f_s3" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="s_cer" target="s_hist">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <!-- Progress chain -->
+        <mxCell id="f_p1" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="p_hdr" target="p_stats">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="f_p2" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="p_stats" target="p_links">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Parent access + chain -->
+        <mxCell id="f_home_pin" value="👨‍👩‍👧 Parent (openPin)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#9673a6;fontColor=#5b3a78;fontStyle=1;" edge="1" parent="1" source="home" target="pin_gate">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="f_pin_err" value="✗" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#b85450;fontStyle=1;" edge="1" parent="1" source="pin_gate" target="pin_err">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="f_err_retry" value="retry" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.15;entryY=0;entryDx=0;entryDy=0;strokeColor=#b85450;fontSize=10;" edge="1" parent="1" source="pin_err" target="pin_gate">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="f_pin_dash" value="✓ correct" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeColor=#9673a6;fontStyle=1;" edge="1" parent="1" source="pin_gate" target="dash">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="f_dash1" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeColor=#9673a6;" edge="1" parent="1" source="dash" target="dash_set">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="f_dash2" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeColor=#9673a6;" edge="1" parent="1" source="dash_set" target="dash_pin">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Legend -->
+        <mxCell id="legend2" value="Legend:  green = child zone   purple = parent zone (PIN-gated)   yellow diamond = gate   blue = navigation/home   dashed = secondary / note / loop" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="40" y="1058" width="1300" height="20" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

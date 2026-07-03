@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-<meta name="theme-color" content="#7C3AED"/>
+<meta name="theme-color" content="#6C4BD6"/>
 <title>Ollie — STEAM Reading Buddy</title>
 <link rel="manifest" href="manifest.json"/>
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png"/>
@@ -22,7 +22,7 @@
 <body>
 <div id="app">
   <div id="hdr">
-    <h1>🦉 Ollie</h1>
+    <h1>🐙 Ollie</h1>
     <div class="hdr-r">
       <div id="hdr-strk" class="hdr-strk" style="display:none" aria-label="Current correct-answer streak"><span class="hdr-strk-icon">🔥</span><span id="hdr-strk-num">0</span></div>
       <div class="hpill" onclick="openGrade()">Grade <span id="glbl">K</span> ▾</div>
@@ -39,24 +39,32 @@
             <div id="lr"></div>
             <div id="ow" class="owl-i">
               <svg id="osv" viewBox="0 0 82 88" xmlns="http://www.w3.org/2000/svg">
-                <ellipse cx="41" cy="76" rx="21" ry="14" fill="#7C3AED" opacity=".9"/>
-                <ellipse cx="18" cy="73" rx="11" ry="14" fill="#6D28D9" transform="rotate(-18 18 73)"/>
-                <ellipse cx="64" cy="73" rx="11" ry="14" fill="#6D28D9" transform="rotate(18 64 73)"/>
-                <circle cx="41" cy="36" r="30" fill="#8B5CF6"/>
-                <polygon points="22,12 14,0 30,10" fill="#6D28D9"/>
-                <polygon points="60,12 68,0 52,10" fill="#6D28D9"/>
-                <ellipse cx="41" cy="38" rx="22" ry="20" fill="#EDE9FE" opacity=".92"/>
-                <circle cx="30" cy="34" r="10" fill="#fff"/>
-                <circle cx="52" cy="34" r="10" fill="#fff"/>
-                <circle id="el" cx="30" cy="35" r="5.5" fill="#1E1B4B"/>
-                <circle id="er" cx="52" cy="35" r="5.5" fill="#1E1B4B"/>
-                <circle cx="32" cy="33" r="2.2" fill="#fff"/>
-                <circle cx="54" cy="33" r="2.2" fill="#fff"/>
-                <g id="bc"><path d="M38,46 Q41,43 44,46 L41,51 Z" fill="#F59E0B"/></g>
-                <g id="bo" style="opacity:0"><path d="M37,44 Q41,40 45,44 L43,51 Q41,55 39,51 Z" fill="#F59E0B"/><ellipse cx="41" cy="50" rx="3" ry="2" fill="#7C2D12"/></g>
-                <circle cx="37" cy="64" r="2" fill="#C4B5FD" opacity=".7"/>
-                <circle cx="41" cy="68" r="2.5" fill="#C4B5FD" opacity=".7"/>
-                <circle cx="45" cy="64" r="2" fill="#C4B5FD" opacity=".7"/>
+                <!-- Ollie the octopus — ids osv/el/er/bc/bo kept so VIZ blink/beak/bob animations work unchanged -->
+                <g id="tents">
+                  <path d="M16 50 Q7 67 13 83" stroke="#573BB0" stroke-width="7" fill="none" stroke-linecap="round"/>
+                  <path d="M24 55 Q17 72 21 86" stroke="#6C4BD6" stroke-width="6.5" fill="none" stroke-linecap="round"/>
+                  <path d="M31 57 Q27 73 32 87" stroke="#7B5BE0" stroke-width="6.5" fill="none" stroke-linecap="round"/>
+                  <path d="M39 58 Q39 73 41 87" stroke="#8262E4" stroke-width="6" fill="none" stroke-linecap="round"/>
+                  <path d="M47 57 Q51 73 49 87" stroke="#8262E4" stroke-width="6" fill="none" stroke-linecap="round"/>
+                  <path d="M54 56 Q60 72 54 86" stroke="#7B5BE0" stroke-width="6.5" fill="none" stroke-linecap="round"/>
+                  <path d="M59 54 Q66 70 61 85" stroke="#6C4BD6" stroke-width="6.5" fill="none" stroke-linecap="round"/>
+                  <path d="M66 50 Q75 67 69 83" stroke="#573BB0" stroke-width="7" fill="none" stroke-linecap="round"/>
+                  <circle cx="38" cy="69" r="1.4" fill="#CDBDF2"/>
+                  <circle cx="42" cy="75" r="1.4" fill="#CDBDF2"/>
+                  <circle cx="47" cy="69" r="1.4" fill="#CDBDF2"/>
+                </g>
+                <ellipse cx="41" cy="30" rx="27" ry="25" fill="#6C4BD6"/>
+                <ellipse cx="31" cy="17" rx="9" ry="6" fill="#8262E4" opacity=".55"/>
+                <circle cx="31" cy="33" r="11" fill="#fff"/>
+                <circle cx="52" cy="33" r="11" fill="#fff"/>
+                <circle id="el" cx="32" cy="34" r="5.5" fill="#2D2438"/>
+                <circle id="er" cx="51" cy="34" r="5.5" fill="#2D2438"/>
+                <circle cx="34" cy="31" r="2" fill="#fff"/>
+                <circle cx="53" cy="31" r="2" fill="#fff"/>
+                <circle cx="20" cy="42" r="4.5" fill="#F26A86" opacity=".45"/>
+                <circle cx="62" cy="42" r="4.5" fill="#F26A86" opacity=".45"/>
+                <g id="bc"><path d="M37 45 Q41 49 45 45" stroke="#2D2438" stroke-width="2.2" fill="none" stroke-linecap="round"/></g>
+                <g id="bo" style="opacity:0"><ellipse cx="41" cy="46" rx="3.6" ry="4.2" fill="#2D2438"/><ellipse cx="41" cy="47.4" rx="1.7" ry="2" fill="#F26A86"/></g>
               </svg>
             </div>
           </div>
@@ -143,13 +151,13 @@
 
     <!-- SPELL CENTER -->
     <div class="tc" id="tab-spell" role="tabpanel" aria-labelledby="tb-spell" style="padding:12px;overflow-y:auto;gap:10px;align-items:stretch">
-      <h2 style="font-family:'Fredoka One',cursive;font-size:1.2rem;text-align:center;background:linear-gradient(135deg,#7C3AED,#EC4899);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">📖 Spell Center</h2>
+      <h2 style="font-family:'Fredoka One',cursive;font-size:1.2rem;text-align:center;background:linear-gradient(135deg,#573BB0,#7B5BE0);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">📖 Spell Center</h2>
       <div id="spell-card" style="background:#FFFFFF;border:2px solid #E2E8F0;border-radius:20px;padding:16px;box-shadow:0 4px 16px rgba(0,0,0,.05)">
         <div style="font-size:12px;color:var(--muted);font-weight:700;text-align:center;margin-bottom:8px">Type a word and Ollie will teach you!</div>
         <div style="display:flex;gap:7px;align-items:center">
           <button id="spell-mic" onclick="togSpellMic()" type="button" aria-label="How to speak your answer" title="How to speak your answer">🎤</button>
           <input id="spell-inp" class="si" placeholder="Type the answer OR use the 🎤 in the keyboard" style="text-align:center;flex:1" onkeydown="if(event.key==='Enter'){spellWord();event.preventDefault();}"/>
-          <button id="spell-btn" onclick="spellWord()" style="background:linear-gradient(135deg,#7C3AED,#8B5CF6);border:none;border-radius:13px;padding:11px 18px;font-family:'Nunito',sans-serif;font-weight:800;font-size:13px;color:#fff;cursor:pointer;box-shadow:0 2px 8px rgba(124,58,237,.3);white-space:nowrap">Spell It!</button>
+          <button id="spell-btn" onclick="spellWord()" style="background:linear-gradient(135deg,#7B5BE0,#573BB0);border:none;border-radius:13px;padding:11px 18px;font-family:'Nunito',sans-serif;font-weight:800;font-size:13px;color:#fff;cursor:pointer;box-shadow:0 2px 8px rgba(124,58,237,.3);white-space:nowrap">Spell It!</button>
         </div>
         <div id="spell-result" style="margin-top:12px;display:none">
           <div id="spell-word" style="font-family:'Fredoka One',cursive;font-size:1.6rem;text-align:center;color:var(--purple);margin-bottom:4px"></div>
@@ -319,7 +327,7 @@ const BADGES=[
 
 /* ══ STATE ══ */
 let S={
-  grade:'K',diff:'Beginner',pin:'',listenWait:60,mode:'calm',exSubject:'Math',mathSkill:'Counting',
+  grade:'K',diff:'Beginner',pin:'',listenWait:60,mode:'normal',exSubject:'Math',mathSkill:'Counting',
   cnt:{Spelling:0,Grammar:0,Comprehension:0,Astrology:0,Geology:0,Biology:0,Science:0,Technology:0,Engineering:0,Math:0,MathSkills:{Counting:0,Adding:0,Subtracting:0,Multiplying:0,Dividing:0}},
   ex:{Spelling:{c:0,t:0},Grammar:{c:0,t:0},Comprehension:{c:0,t:0},Astrology:{c:0,t:0},Geology:{c:0,t:0},Biology:{c:0,t:0},Science:{c:0,t:0},Technology:{c:0,t:0},Engineering:{c:0,t:0},Math:{c:0,t:0}},
   streak:0,bestStreak:0,totalEx:0,
@@ -353,7 +361,7 @@ function addBub(role,txt,ex){
   let mel=null;
   if(role==='user'){d.innerHTML=`<div class="mav">👦</div><div class="mb us">${fmt(txt)}</div>`;}
   else{
-    let h=`<div class="mav">🦉</div><div class="mb ai">`;
+    let h=`<div class="mav">🐙</div><div class="mb ai">`;
     if(ex&&ex.lessonType)h+=`<div class="ltag">${ex.lessonType}</div><br>`;
     h+=`<span class="mxt">${fmt(txt)}</span>`;
     if(ex&&ex.passage)h+=`<div class="passage">📖 ${fmt(ex.passage)}</div>`;
@@ -362,7 +370,7 @@ function addBub(role,txt,ex){
   }
   sc.appendChild(d);sc.scrollTop=sc.scrollHeight;return mel;
 }
-function addTyp(){const sc=document.getElementById('cscroll');const d=document.createElement('div');d.className='mr';d.id='td';d.innerHTML=`<div class="mav">🦉</div><div class="mb ai"><div class="tdots"><span></span><span></span><span></span></div></div>`;sc.appendChild(d);sc.scrollTop=sc.scrollHeight;}
+function addTyp(){const sc=document.getElementById('cscroll');const d=document.createElement('div');d.className='mr';d.id='td';d.innerHTML=`<div class="mav">🐙</div><div class="mb ai"><div class="tdots"><span></span><span></span><span></span></div></div>`;sc.appendChild(d);sc.scrollTop=sc.scrollHeight;}
 function rmTyp(){const e=document.getElementById('td');if(e)e.remove();}
 
 /* ══ VISUALIZER ══ */
