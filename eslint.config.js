@@ -49,13 +49,13 @@ module.exports = [
         updProg: 'readonly', checkBadges: 'readonly',
         showTab: 'readonly', setDiff: 'readonly', pickGrade: 'readonly',
         closeAll: 'readonly', openGrade: 'readonly', openPin: 'readonly',
-        chkPin: 'readonly', openDash: 'readonly', openChgPin: 'readonly', saveChgPin: 'readonly',
-        acceptCoppa: 'readonly', startApp: 'readonly', setListenWait: 'readonly',
+        chkPin: 'readonly', openDash: 'readonly', openChgPin: 'readonly', saveChgPin: 'readonly', deleteAllData: 'readonly',
+        requestConsentCode: 'readonly', verifyConsentCode: 'readonly', coppaBackToEmail: 'readonly', startApp: 'readonly', setListenWait: 'readonly',
         sendTyped: 'readonly', spellWord: 'readonly', showSpellResult: 'readonly', togSpellMic: 'readonly',
         setMode: 'readonly',
         openStreakHistory: 'readonly', showToast: 'readonly',
         // Observability + logger globals (defined by observability.js / logger.js)
-        Sentry: 'readonly', Logger: 'readonly', progBus: 'readonly',
+        Sentry: 'readonly', Logger: 'readonly', progBus: 'readonly', Safety: 'readonly',
         // CommonJS sentinel — used by browser scripts that also export to
         // Node for unit tests via `typeof module !== 'undefined' && module.exports = ...`
         module: 'readonly',

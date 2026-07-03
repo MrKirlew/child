@@ -1,5 +1,5 @@
 /* ══ GEMINI LIVE API — WebSocket voice conversation ══ */
-/* globals: S, VIZ, reportError, esc, addBub, addTyp, rmTyp, saveS, checkBadges, SUBS, sysPmt, handleVoiceAns, stopEMic, rememberConversationTurn, recordLearnActivity */
+/* globals: S, VIZ, reportError, esc, addBub, addTyp, rmTyp, saveS, checkBadges, SUBS, sysPmt, handleVoiceAns, stopEMic, rememberConversationTurn, recordLearnActivity, Safety, Logger */
 
 // Single Live API model. The earlier `gemini-2.5-flash-native-audio-preview-12-2025`
 // was deprecated by Google on/before 2026-04-17 and never returned setupComplete,
@@ -53,6 +53,7 @@ async function _connectLive() {
             }
           },
           systemInstruction: { parts: [{ text: sysPmt() }] },
+          safetySettings: (typeof Safety !== 'undefined') ? Safety.SAFETY_SETTINGS : undefined,
           inputAudioTranscription: {},
           outputAudioTranscription: {},
           realtimeInputConfig: {
@@ -135,9 +136,18 @@ async function _handleServerMsg(ev) {
     _resetListenTimer();
     if (_inputTranscript.trim()) {
       const userText = _inputTranscript.trim();
-      addBub('user', userText, {});
-      rememberConversationTurn('user', userText);
-      _lastUserTurn = userText;
+      // Don't echo inappropriate input back into the chat; nudge instead.
+      // (Audio already reached Google; Gemini safetySettings + output moderation
+      // handle the reply. This just avoids surfacing the bad words on screen.)
+      if (typeof Safety !== 'undefined' && !Safety.checkInput(userText).allowed) {
+        if (typeof Logger !== 'undefined') Logger.warn('safety.input_filtered', { path: 'live' });
+        addBub('ai', Safety.safeNudge(), {});
+        _lastUserTurn = '';
+      } else {
+        addBub('user', userText, {});
+        rememberConversationTurn('user', userText);
+        _lastUserTurn = userText;
+      }
       _inputTranscript = '';
     }
     for (const part of msg.serverContent.modelTurn.parts) {
@@ -159,6 +169,11 @@ async function _handleServerMsg(ev) {
       // Parse JSON if the model returned it (from system prompt), otherwise use raw text
       let displayText = _transcript.trim();
       try { const parsed = JSON.parse(displayText); if (parsed.message) displayText = parsed.message; } catch (_e) { /* not JSON, use as-is */ }
+      // Output moderation (defense-in-depth around Gemini safetySettings).
+      if (typeof Safety !== 'undefined' && !Safety.checkOutput(displayText).safe) {
+        if (typeof Logger !== 'undefined') Logger.warn('safety.output_filtered', { path: 'live' });
+        displayText = Safety.safeRedirect();
+      }
       rememberConversationTurn('assistant', displayText);
       addBub('ai', displayText, { lessonType: 'Teaching' });
       recordLearnActivity(_detectSubject(displayText), _lastUserTurn);

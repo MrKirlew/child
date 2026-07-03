@@ -1,4 +1,5 @@
 const { withSentry } = require('../_observability');
+const Safety = require('../../www/js/safety.js');
 
 // Text generation models — native audio models don't support text output
 // Live audio (gemini-3.1-flash-live-preview) is used via Live API WebSocket only
@@ -6,13 +7,23 @@ const PRIMARY = 'gemini-2.5-flash';
 const FALLBACK = 'gemini-2.0-flash';
 const API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
 
-// Child-safe content filtering — block at lowest threshold
+// Child-safe content filtering — block at lowest threshold.
+// Kept as a literal here (source-grep test) and mirrored by Safety.SAFETY_SETTINGS
+// (www/js/safety.js), which the Live path uses. Keep the two in sync.
 const SAFETY = [
   { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_LOW_AND_ABOVE' },
   { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_LOW_AND_ABOVE' },
   { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_LOW_AND_ABOVE' },
   { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_LOW_AND_ABOVE' },
+  { category: 'HARM_CATEGORY_CIVIC_INTEGRITY', threshold: 'BLOCK_LOW_AND_ABOVE' },
 ];
+
+// Log a safety block without any child content (COPPA — counts/categories only).
+function logSafetyBlock(reason, model) {
+  console.log(JSON.stringify({
+    ts: new Date().toISOString(), level: 'warn', event: 'safety.block', reason, model,
+  }));
+}
 
 async function tryGenerate(model, body, apiKey) {
   const url = `${API_BASE}/${model}:generateContent?key=${apiKey}`;
@@ -42,6 +53,11 @@ const handler = async (req, res) => {
     try {
       const result = await tryGenerate(PRIMARY, body, API_KEY);
       if (result.ok) {
+        const verdict = Safety.isBlocked(result.data);
+        if (verdict.blocked) {
+          logSafetyBlock(verdict.reason, PRIMARY);
+          return res.json({ blocked: true, reason: verdict.reason });
+        }
         result.data._meta = { model: PRIMARY, attempt };
         return res.json(result.data);
       }
@@ -59,6 +75,11 @@ const handler = async (req, res) => {
   try {
     const result = await tryGenerate(FALLBACK, body, API_KEY);
     if (result.ok) {
+      const verdict = Safety.isBlocked(result.data);
+      if (verdict.blocked) {
+        logSafetyBlock(verdict.reason, FALLBACK);
+        return res.json({ blocked: true, reason: verdict.reason });
+      }
       result.data._meta = { model: FALLBACK, attempt: 0, fallback: true };
       return res.json(result.data);
     }

@@ -1,5 +1,5 @@
 /* ══ UI ══ */
-/* globals: S, SUBS, SCOL, saveS, updProg, updScoreBar, addBub, speak, speakDirect, VIZ, hashPin, esc, sendLiveText, connectLive, sendL, aiGenerate, checkBadges, SpellTools */
+/* globals: S, SUBS, SCOL, saveS, updProg, updScoreBar, addBub, speak, speakDirect, VIZ, hashPin, esc, sendLiveText, connectLive, sendL, aiGenerate, checkBadges, SpellTools, showToast, Safety, Logger */
 
 function showTab(t) { ['learn', 'ex', 'spell', 'prog'].forEach(id => { document.getElementById('tab-' + id).classList.toggle('on', id === t); document.getElementById('tb-' + id).classList.toggle('on', id === t); }); if (t === 'prog') updProg(); }
 function setMode(m) { S.mode = m; saveS(); document.body.className = (m === 'normal' || m === 'excited') ? '' : 'mode-' + m; document.querySelectorAll('[data-mode]').forEach(e => e.classList.toggle('on', e.dataset.mode === m)); }
@@ -17,7 +17,11 @@ function closeAll() {
   document.querySelectorAll('.ov').forEach(o => o.classList.remove('open'));
 }
 function openGrade() { document.querySelectorAll('#gpr .pl').forEach(e => e.classList.toggle('on', e.dataset.g === S.grade)); document.getElementById('ov-grade').classList.add('open'); }
-function openPin() { document.getElementById('pin-inp').value = ''; document.getElementById('pin-err').textContent = ''; document.getElementById('ov-pin').classList.add('open'); }
+// First parent-area access with no PIN set → prompt to CREATE a PIN (no shipped default).
+function openPin() {
+  if (!S.pin) { openChgPin(true); return; }
+  document.getElementById('pin-inp').value = ''; document.getElementById('pin-err').textContent = ''; document.getElementById('ov-pin').classList.add('open');
+}
 
 async function chkPin() {
   const entered = document.getElementById('pin-inp').value;
@@ -265,14 +269,43 @@ function showToast(text, opts) {
     else document.addEventListener('DOMContentLoaded', () => _updateHeaderStreak({}));
   }
 })();
-function openChgPin() { closeAll(); document.getElementById('p1').value = ''; document.getElementById('p2').value = ''; document.getElementById('chpe').textContent = ''; document.getElementById('ov-chpin').classList.add('open'); }
+let _firstPinSetup = false;
+function openChgPin(firstTime) {
+  closeAll();
+  _firstPinSetup = !!firstTime;
+  document.getElementById('p1').value = ''; document.getElementById('p2').value = ''; document.getElementById('chpe').textContent = '';
+  const title = document.getElementById('chpin-title');
+  if (title) title.textContent = firstTime ? '🔒 Create a Parent PIN' : '🔒 Change PIN';
+  document.getElementById('ov-chpin').classList.add('open');
+}
 
 async function saveChgPin() {
   const a = document.getElementById('p1').value, b = document.getElementById('p2').value;
   if (a.length !== 4) { document.getElementById('chpe').textContent = 'PIN must be 4 digits.'; return; }
   if (a !== b) { document.getElementById('chpe').textContent = 'PINs do not match!'; return; }
   S.pin = await hashPin(a);
-  saveS(); closeAll(); addBub('ai', 'Parent PIN updated!', {});
+  saveS(); closeAll();
+  if (_firstPinSetup) { _firstPinSetup = false; openDash(); }
+  else addBub('ai', 'Parent PIN updated!', {});
+}
+
+// COPPA/GDPR — parental right to delete. Clears ALL locally stored data
+// (progress, spelled words, settings, PIN) + session caches, then reloads so
+// the consent gate reappears (revocation). Nothing was stored on our servers.
+function deleteAllData() {
+  if (!confirm('Delete ALL of your child’s data on this device — progress, spelled words, settings, and PIN? This cannot be undone.')) return;
+  // Revoke the server-side consent record too, if we have a token (fire-and-forget; keepalive survives the reload).
+  try {
+    const token = S && S.consentToken;
+    if (token && window.AI_PROXY) {
+      fetch(window.AI_PROXY + '/consent/revoke', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token }), keepalive: true }).catch(() => {});
+    }
+  } catch (_e) { /* noop */ }
+  try { localStorage.removeItem('kai5'); } catch (_e) { /* noop */ }
+  try { localStorage.removeItem('kai5_spell'); } catch (_e) { /* noop */ }
+  try { sessionStorage.clear(); } catch (_e) { /* noop */ }
+  if (typeof Logger !== 'undefined') Logger.warn('data.delete_all', {});
+  location.reload();
 }
 
 /* ══ TYPED MESSAGE (Learn tab) ══ */
@@ -281,6 +314,12 @@ async function sendTyped() {
   const txt = inp.value.trim();
   if (!txt) return;
   inp.value = '';
+  // Pre-model input filter — never echo or send inappropriate input.
+  if (typeof Safety !== 'undefined' && !Safety.checkInput(txt).allowed) {
+    if (typeof Logger !== 'undefined') Logger.warn('safety.input_filtered', { path: 'typed' });
+    addBub('ai', Safety.safeNudge(), {});
+    return;
+  }
   // Typed spelling requests should use the deterministic spell flow even when
   // the Learn websocket is already warm.
   if (SpellTools.extractSpellTarget(txt)) {
@@ -417,6 +456,12 @@ async function spellWord() {
   const word = SpellTools.cleanSpellWord(inp.value);
   if (!word) return;
   inp.value = '';
+  // Pre-model input filter — don't spell/define inappropriate words.
+  if (typeof Safety !== 'undefined' && !Safety.checkInput(word).allowed) {
+    if (typeof Logger !== 'undefined') Logger.warn('safety.input_filtered', { path: 'spell' });
+    showToast(Safety.safeNudge());
+    return;
+  }
   const btn = document.getElementById('spell-btn'); btn.disabled = true;
   document.getElementById('spell-load').textContent = 'Ollie is saying it...';
   document.getElementById('spell-load').style.display = 'block';
@@ -550,11 +595,46 @@ function _renderSpellHistory() {
   }
 }
 
-/* ══ COPPA CONSENT ══ */
-document.getElementById('coppa-chk').addEventListener('change', function () {
-  const btn = document.getElementById('coppa-btn'); btn.disabled = !this.checked; btn.style.opacity = this.checked ? '1' : '.5';
-});
-function acceptCoppa() { if (!document.getElementById('coppa-chk').checked) return; S.coppaConsent = true; saveS(); document.getElementById('ov-coppa').classList.remove('open'); startApp(); }
+/* ══ COPPA CONSENT — email-plus verifiable parental consent ══ */
+let _consentEmail = '';
+async function requestConsentCode() {
+  const email = (document.getElementById('coppa-email').value || '').trim();
+  const errEl = document.getElementById('coppa-err'); errEl.textContent = '';
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { errEl.textContent = 'Please enter a valid email address.'; return; }
+  const btn = document.getElementById('coppa-send'); const label = btn.textContent; btn.disabled = true; btn.textContent = 'Sending…';
+  try {
+    const r = await fetch(window.AI_PROXY + '/consent/request', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email }) });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(d.error || 'Could not send the code.');
+    _consentEmail = email;
+    document.getElementById('coppa-email-lbl').textContent = email;
+    document.getElementById('coppa-step1').style.display = 'none';
+    document.getElementById('coppa-step2').style.display = 'block';
+    document.getElementById('coppa-code').focus();
+  } catch (e) { errEl.textContent = e.message; }
+  finally { btn.disabled = false; btn.textContent = label; }
+}
+async function verifyConsentCode() {
+  const code = (document.getElementById('coppa-code').value || '').trim();
+  const errEl = document.getElementById('coppa-err'); errEl.textContent = '';
+  if (!/^\d{6}$/.test(code)) { errEl.textContent = 'Enter the 6-digit code we emailed you.'; return; }
+  const btn = document.getElementById('coppa-verify'); const label = btn.textContent; btn.disabled = true; btn.textContent = 'Verifying…';
+  try {
+    const r = await fetch(window.AI_PROXY + '/consent/verify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: _consentEmail, code }) });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok || !d.consented) throw new Error(d.error || 'Verification failed. Please try again.');
+    S.coppaConsent = true; S.consentToken = d.token || null; S.consentAt = new Date().toISOString(); S.consentPolicy = d.policyVersion || null;
+    saveS();
+    document.getElementById('ov-coppa').classList.remove('open');
+    startApp();
+  } catch (e) { errEl.textContent = e.message; }
+  finally { btn.disabled = false; btn.textContent = label; }
+}
+function coppaBackToEmail() {
+  document.getElementById('coppa-step2').style.display = 'none';
+  document.getElementById('coppa-step1').style.display = 'block';
+  document.getElementById('coppa-err').textContent = '';
+}
 
 /* ══ INIT ══ */
 async function startApp() {
