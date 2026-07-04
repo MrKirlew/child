@@ -240,6 +240,7 @@
   <div class="sep"></div>
   <div class="fl" style="margin-bottom:4px">👤 Parent account</div>
   <p id="acct-email" style="font-size:12px;color:var(--muted);margin-bottom:8px">—</p>
+  <button class="sbt" id="acct-sub-btn" onclick="manageSubscription()" style="margin-bottom:6px">⭐ Upgrade to Premium</button>
   <button class="sbt sc" onclick="logOut()" style="margin-bottom:10px">Log out</button>
   <div class="sep"></div>
   <button class="sbt sc" onclick="openChgPin()" style="margin-bottom:6px">🔒 Change PIN</button>
@@ -346,7 +347,7 @@ let S={
   ex:{Spelling:{c:0,t:0},Grammar:{c:0,t:0},Comprehension:{c:0,t:0},Astrology:{c:0,t:0},Geology:{c:0,t:0},Biology:{c:0,t:0},Science:{c:0,t:0},Technology:{c:0,t:0},Engineering:{c:0,t:0},Math:{c:0,t:0}},
   streak:0,bestStreak:0,totalEx:0,
   earnedBadges:[],recentEx:[],recentQ:[],lastQuestions:[],lastActiveAt:null,dailyCnt:{},_wrongStreak:{},_toastShown:{},chatHist:[],busy:false,
-  consentAt:null,consentPolicy:null,sessionToken:null,sessionEmail:null,subStatus:null
+  consentAt:null,consentPolicy:null,sessionToken:null,sessionEmail:null,subStatus:null,learnDay:null
 };
 function saveS(){try{const {chatHist,busy,...r}=S;localStorage.setItem('kai5',JSON.stringify(r));}catch(e){}} // eslint-disable-line no-empty -- storage quota
 function loadS(){try{const d=localStorage.getItem('kai5');if(d)Object.assign(S,JSON.parse(d));}catch(e){}} // eslint-disable-line no-empty -- corrupt storage

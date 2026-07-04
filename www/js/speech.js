@@ -1,5 +1,5 @@
 /* ══ GEMINI LIVE API — WebSocket voice conversation ══ */
-/* globals: S, VIZ, reportError, esc, addBub, addTyp, rmTyp, saveS, checkBadges, SUBS, sysPmt, handleVoiceAns, stopEMic, rememberConversationTurn, recordLearnActivity, Safety, Logger */
+/* globals: S, VIZ, reportError, esc, addBub, addTyp, rmTyp, saveS, checkBadges, SUBS, sysPmt, handleVoiceAns, stopEMic, rememberConversationTurn, recordLearnActivity, Safety, Logger, learnGate */
 
 // Single Live API model. The earlier `gemini-2.5-flash-native-audio-preview-12-2025`
 // was deprecated by Google on/before 2026-04-17 and never returned setupComplete,
@@ -359,6 +359,8 @@ function _resetListenTimer() {
 // Start/stop conversation (Learn tab mic button)
 async function togLMic() {
   if (_conversing) { stopConversation(); return; }
+  // Free tier: live voice counts as a Learn turn (Premium = unlimited).
+  if (typeof learnGate === 'function' && !learnGate()) return;
   startConversation();
 }
 

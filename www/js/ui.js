@@ -137,6 +137,8 @@ function _renderDash() {
 function _renderAccount() {
   const ae = document.getElementById('acct-email');
   if (ae) ae.textContent = S.sessionEmail ? 'Signed in as ' + S.sessionEmail : 'Not signed in';
+  const btn = document.getElementById('acct-sub-btn');
+  if (btn) btn.textContent = isPremium() ? '⭐ Premium — manage subscription' : '⭐ Upgrade to Premium';
 }
 function openDash() {
   _renderDash();
@@ -329,6 +331,58 @@ function logOut() {
   location.reload();
 }
 
+/* ══ SUBSCRIPTION / PAYWALL — Free: Exercises + Spell + capped Learn · Premium: unlimited ══ */
+const FREE_LEARN_CAP = 10; // free Learn AI turns per day
+function isPremium() { return S.subStatus === 'active' || S.subStatus === 'trialing'; }
+function _isNativeApp() { return !!window.Capacitor; }
+function _today() { return new Date().toISOString().slice(0, 10); }
+function _learnCountToday() { return (S.learnDay && S.learnDay.date === _today()) ? (S.learnDay.count || 0) : 0; }
+
+// Gate a Learn AI turn: premium = unlimited; free = capped/day. Increments on allow,
+// shows an upgrade prompt when the free cap is hit. Returns true if allowed.
+function learnGate() {
+  if (isPremium()) return true;
+  const n = _learnCountToday();
+  if (n >= FREE_LEARN_CAP) { showUpgrade(); return false; }
+  S.learnDay = { date: _today(), count: n + 1 };
+  saveS();
+  return true;
+}
+
+// Refresh entitlement from the server (the webhook is the source of truth).
+async function refreshEntitlement() {
+  if (!S.sessionToken || !window.AI_PROXY) return;
+  try {
+    const r = await fetch(window.AI_PROXY + '/auth/session', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sessionToken: S.sessionToken }) });
+    if (!r.ok) return;
+    const d = await r.json().catch(() => ({}));
+    if (d.authenticated) { S.subStatus = (d.subscription && d.subscription.status) || 'none'; if (d.email) S.sessionEmail = d.email; saveS(); _renderAccount(); }
+  } catch (_e) { /* offline — keep cached */ }
+}
+
+// Upgrade / manage. Web: redirect to Stripe. Android: point to the website (Play-policy-safe).
+async function manageSubscription() {
+  if (!S.sessionToken) { addBub('ai', 'Open the parent area to manage your account.', {}); return; }
+  const premium = isPremium();
+  if (!premium && _isNativeApp()) {
+    alert('To unlock Premium, subscribe at ollietutor.com in a web browser. It unlocks here automatically once you’re subscribed.');
+    return;
+  }
+  const action = premium ? 'portal' : 'checkout';
+  try {
+    const r = await fetch(window.AI_PROXY + '/stripe', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sessionToken: S.sessionToken, action }) });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok || !d.url) throw new Error(d.error || 'Could not open billing.');
+    window.location.href = d.url; // → Stripe Checkout or Billing Portal
+  } catch (e) { alert(e.message); }
+}
+
+function showUpgrade() {
+  const base = 'You’ve reached today’s free Learn limit! Unlock unlimited Learn + live voice with Premium.';
+  if (_isNativeApp()) { alert(base + '\n\nSubscribe at ollietutor.com to unlock.'); return; }
+  if (confirm(base + '\n\nUpgrade now?')) manageSubscription();
+}
+
 /* ══ TYPED MESSAGE (Learn tab) ══ */
 async function sendTyped() {
   const inp = document.getElementById('linp');
@@ -342,11 +396,13 @@ async function sendTyped() {
     return;
   }
   // Typed spelling requests should use the deterministic spell flow even when
-  // the Learn websocket is already warm.
+  // the Learn websocket is already warm. (Spelling is free — not Learn-capped.)
   if (SpellTools.extractSpellTarget(txt)) {
     sendL(txt);
     return;
   }
+  // Free tier: cap Learn AI turns per day (Premium = unlimited).
+  if (typeof learnGate === 'function' && !learnGate()) return;
   // Send through Live API if connected, otherwise REST fallback
   if (sendLiveText(txt, { userVisibleText: txt })) return;
   // REST fallback
@@ -668,6 +724,15 @@ async function startApp() {
   // Instant readiness — no API call on startup, no waiting for Ollie to greet
   document.getElementById('slbl').textContent = 'Tap 🎤 to talk to Ollie';
   addBub('ai', 'Hi! I\'m Ollie the Octopus! Tap the 🎤 button to talk to me, or go to Exercises and Spell for fun practice!', { lessonType: 'Welcome' });
+  // Refresh subscription entitlement (webhook is source of truth); handle Stripe return.
+  refreshEntitlement().then(() => {
+    try {
+      if (/[?&]upgraded=1/.test(location.search)) {
+        if (typeof showToast === 'function') showToast('🎉 Welcome to Premium! Enjoy unlimited Learn.');
+        history.replaceState(null, '', location.pathname);
+      }
+    } catch (_e) { /* noop */ }
+  });
 }
 (function init() {
   if (S.coppaConsent) { startApp(); }
