@@ -361,27 +361,42 @@ async function refreshEntitlement() {
 }
 
 // Upgrade / manage. Web: redirect to Stripe. Android: point to the website (Play-policy-safe).
+// Premium → billing portal; Free → open the Upgrade overlay (both plans).
 async function manageSubscription() {
   if (!S.sessionToken) { addBub('ai', 'Open the parent area to manage your account.', {}); return; }
-  const premium = isPremium();
-  if (!premium && _isNativeApp()) {
-    alert('To unlock Premium, subscribe at ollietutor.com in a web browser. It unlocks here automatically once you’re subscribed.');
+  if (isPremium()) {
+    try {
+      const r = await fetch(window.AI_PROXY + '/stripe', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sessionToken: S.sessionToken, action: 'portal' }) });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok || !d.url) throw new Error(d.error || 'Could not open billing.');
+      window.location.href = d.url; // → Stripe Billing Portal
+    } catch (e) { alert(e.message); }
     return;
   }
-  const action = premium ? 'portal' : 'checkout';
+  openUpgrade();
+}
+
+// Show the two-plan upgrade sheet (web) or the "subscribe on the website" note (Android).
+function openUpgrade() {
+  const web = document.getElementById('upg-web'), nat = document.getElementById('upg-native');
+  if (web && nat) { const native = _isNativeApp(); web.style.display = native ? 'none' : 'block'; nat.style.display = native ? 'block' : 'none'; }
+  const ov = document.getElementById('ov-upgrade');
+  if (ov) ov.classList.add('open');
+}
+
+// Redirect to Stripe Checkout for the chosen plan (web only).
+async function chooseUpgrade(plan) {
+  if (!S.sessionToken) { alert('Open the parent area to manage your account.'); return; }
   try {
-    const r = await fetch(window.AI_PROXY + '/stripe', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sessionToken: S.sessionToken, action }) });
+    const r = await fetch(window.AI_PROXY + '/stripe', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sessionToken: S.sessionToken, action: 'checkout', plan }) });
     const d = await r.json().catch(() => ({}));
-    if (!r.ok || !d.url) throw new Error(d.error || 'Could not open billing.');
-    window.location.href = d.url; // → Stripe Checkout or Billing Portal
+    if (!r.ok || !d.url) throw new Error(d.error || 'Could not open checkout.');
+    window.location.href = d.url; // → Stripe Checkout
   } catch (e) { alert(e.message); }
 }
 
-function showUpgrade() {
-  const base = 'You’ve reached today’s free Learn limit! Unlock unlimited Learn + live voice with Premium.';
-  if (_isNativeApp()) { alert(base + '\n\nSubscribe at ollietutor.com to unlock.'); return; }
-  if (confirm(base + '\n\nUpgrade now?')) manageSubscription();
-}
+// Daily Learn-cap hit → open the same upgrade sheet.
+function showUpgrade() { openUpgrade(); }
 
 /* ══ TYPED MESSAGE (Learn tab) ══ */
 async function sendTyped() {

@@ -50,7 +50,7 @@ module.exports = [
         showTab: 'readonly', setDiff: 'readonly', pickGrade: 'readonly',
         closeAll: 'readonly', openGrade: 'readonly', openPin: 'readonly',
         chkPin: 'readonly', openDash: 'readonly', openChgPin: 'readonly', saveChgPin: 'readonly', deleteAllData: 'readonly', logOut: 'readonly',
-        manageSubscription: 'readonly', refreshEntitlement: 'readonly', showUpgrade: 'readonly', isPremium: 'readonly', learnGate: 'readonly',
+        manageSubscription: 'readonly', refreshEntitlement: 'readonly', showUpgrade: 'readonly', isPremium: 'readonly', learnGate: 'readonly', openUpgrade: 'readonly', chooseUpgrade: 'readonly',
         requestConsentCode: 'readonly', verifyConsentCode: 'readonly', coppaBackToEmail: 'readonly', startApp: 'readonly', setListenWait: 'readonly',
         sendTyped: 'readonly', spellWord: 'readonly', showSpellResult: 'readonly', togSpellMic: 'readonly',
         setMode: 'readonly',

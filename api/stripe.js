@@ -12,6 +12,11 @@ const stripe = process.env.STRIPE_SECRET_KEY ? Stripe(process.env.STRIPE_SECRET_
 const SITE = process.env.APP_URL || 'https://www.ollietutor.com';
 const CUSTOMER_TTL = 60 * 60 * 24 * 365 * 3;
 
+// Two plans. Read the owner's exact env-var names, with fallbacks.
+const PRICE_MONTHLY = process.env.Ollie_Premium_Monthly_PRICEID || process.env.STRIPE_PRICE_MONTHLY || process.env.STRIPE_PRICE_ID || null;
+const PRICE_ANNUAL = process.env.Ollie_Premium_Annual_PRICEID || process.env.STRIPE_PRICE_ANNUAL || process.env.STRIPE_PRICE_ID || null;
+function priceFor(plan) { return plan === 'monthly' ? PRICE_MONTHLY : PRICE_ANNUAL; }
+
 async function getOrCreateCustomer(he, email) {
   const existing = await get('stripe_customer:' + he);
   if (existing) return existing;
@@ -20,14 +25,16 @@ async function getOrCreateCustomer(he, email) {
   return cust.id;
 }
 
-async function doCheckout(res, sess) {
+async function doCheckout(res, sess, plan) {
+  const priceId = priceFor(plan);
+  if (!priceId) return res.status(400).json({ error: 'That plan is not available right now.' });
   const customer = await getOrCreateCustomer(sess.he, sess.email);
   const session = await stripe.checkout.sessions.create({
     mode: 'subscription',
-    line_items: [{ price: process.env.STRIPE_PRICE_ID, quantity: 1 }],
+    line_items: [{ price: priceId, quantity: 1 }],
     customer,
     // emailHash on BOTH so every webhook event can find the account.
-    metadata: { emailHash: sess.he },
+    metadata: { emailHash: sess.he, plan },
     subscription_data: { metadata: { emailHash: sess.he } },
     success_url: SITE + '/?upgraded=1',
     cancel_url: SITE + '/?canceled=1',
@@ -48,14 +55,15 @@ const handler = async (req, res) => {
   if (handled) return;
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
   if (!allowed) return res.status(403).json({ error: 'Origin not allowed' });
-  if (!stripe || !process.env.STRIPE_PRICE_ID) return res.status(500).json({ error: 'Billing is not set up yet.' });
+  if (!stripe || (!PRICE_MONTHLY && !PRICE_ANNUAL)) return res.status(500).json({ error: 'Billing is not set up yet.' });
 
   const sess = await getSession(req.body && req.body.sessionToken);
   if (!sess) return res.status(401).json({ error: 'Please sign in first.' });
 
   try {
     const action = req.body && req.body.action;
-    if (action === 'checkout') return await doCheckout(res, sess);
+    const plan = (req.body && req.body.plan) === 'monthly' ? 'monthly' : 'annual';
+    if (action === 'checkout') return await doCheckout(res, sess, plan);
     if (action === 'portal') return await doPortal(res, sess);
     return res.status(400).json({ error: 'Unknown action' });
   } catch (e) {

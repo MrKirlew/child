@@ -265,6 +265,20 @@
   <button class="sbt sc" onclick="closeAll()" style="margin-top:10px">Close</button>
 </div></div>
 
+<div class="ov" id="ov-upgrade" role="dialog" aria-modal="true" aria-label="Upgrade to Premium"><div class="sheet" style="max-width:380px"><div class="sh"></div>
+  <button class="cx" onclick="closeAll()">✕</button>
+  <div class="st2">⭐ Unlock Ollie Premium</div>
+  <p style="font-size:12px;color:var(--muted);margin:6px 0 12px">Unlimited Learn + live-voice conversation with Ollie. Exercises &amp; Spell stay free.</p>
+  <div id="upg-web">
+    <button class="sbt" onclick="chooseUpgrade('annual')" style="margin-bottom:8px">Annual — $79.99/yr · <strong>Save 33%</strong></button>
+    <button class="sbt sc" onclick="chooseUpgrade('monthly')">Monthly — $9.99/mo</button>
+    <p style="font-size:10px;color:var(--muted);margin-top:8px;text-align:center">Secure checkout by Stripe. Cancel anytime.</p>
+  </div>
+  <div id="upg-native" style="display:none">
+    <p style="font-size:13px;color:var(--text);font-weight:700;line-height:1.5">To unlock Premium, subscribe at <strong>ollietutor.com</strong> in any web browser. It unlocks here automatically once you’re subscribed.</p>
+  </div>
+</div></div>
+
 <div id="toast-rail" aria-live="polite" aria-atomic="true"></div>
 
 <div class="ov" id="ov-coppa" style="z-index:9999" role="dialog" aria-modal="true" aria-label="Parental consent"><div class="sheet" style="max-width:380px"><div class="sh"></div>
