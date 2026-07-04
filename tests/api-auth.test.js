@@ -4,6 +4,7 @@ const reqHandler = (await import('../api/auth/request.js')).default;
 const verifyHandler = (await import('../api/auth/verify.js')).default;
 const sessionHandler = (await import('../api/auth/session.js')).default;
 const logoutHandler = (await import('../api/auth/logout.js')).default;
+const deleteHandler = (await import('../api/auth/delete.js')).default;
 
 function mockReq(method, body, origin = 'http://localhost') {
   return { method, body, headers: { origin, 'x-forwarded-for': '203.0.113.5' }, url: '/api/auth' };
@@ -141,5 +142,18 @@ describe('POST /api/auth/logout', () => {
     const res = mockRes();
     await logoutHandler(mockReq('POST', {}), res);
     expect(res.statusCode).toBe(400);
+  });
+});
+
+describe('POST /api/auth/delete', () => {
+  it('erases account records for a signed-in parent', async () => {
+    installFetch({ sessionHe: 'hash-abc', accountEmail: 'parent@example.com' });
+    const res = mockRes();
+    await deleteHandler(mockReq('POST', { sessionToken: 'tok' }), res);
+    expect(res.body.deleted).toBe(true);
+    // deletes account/consent/sub/stripe_customer/session
+    const dels = global.fetch.mock.calls.map(c => JSON.parse(c[1].body)).filter(a => a[0] === 'DEL').map(a => a[1]);
+    expect(dels.some(k => k.startsWith('account:'))).toBe(true);
+    expect(dels.some(k => k.startsWith('session:'))).toBe(true);
   });
 });

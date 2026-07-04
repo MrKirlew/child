@@ -134,8 +134,13 @@ function _renderDash() {
   }
 }
 
+function _renderAccount() {
+  const ae = document.getElementById('acct-email');
+  if (ae) ae.textContent = S.sessionEmail ? 'Signed in as ' + S.sessionEmail : 'Not signed in';
+}
 function openDash() {
   _renderDash();
+  _renderAccount();
   document.getElementById('ov-dash').classList.add('open');
   // Live sync: re-render whenever an activity event fires while the
   // dashboard is open. Captured to a handle on the modal so we can
@@ -294,17 +299,33 @@ async function saveChgPin() {
 // the consent gate reappears (revocation). Nothing was stored on our servers.
 function deleteAllData() {
   if (!confirm('Delete ALL of your child’s data on this device — progress, spelled words, settings, and PIN? This cannot be undone.')) return;
-  // Revoke the server-side consent record too, if we have a token (fire-and-forget; keepalive survives the reload).
+  // Erase the server-side account/consent/subscription records too, if signed in
+  // (fire-and-forget; keepalive survives the reload).
   try {
-    const token = S && S.consentToken;
+    const token = S && S.sessionToken;
     if (token && window.AI_PROXY) {
-      fetch(window.AI_PROXY + '/consent/revoke', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token }), keepalive: true }).catch(() => {});
+      fetch(window.AI_PROXY + '/auth/delete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sessionToken: token }), keepalive: true }).catch(() => {});
     }
   } catch (_e) { /* noop */ }
   try { localStorage.removeItem('kai5'); } catch (_e) { /* noop */ }
   try { localStorage.removeItem('kai5_spell'); } catch (_e) { /* noop */ }
   try { sessionStorage.clear(); } catch (_e) { /* noop */ }
   if (typeof Logger !== 'undefined') Logger.warn('data.delete_all', {});
+  location.reload();
+}
+
+// Log out (end the parent session) WITHOUT deleting the child's on-device data.
+// Returns to the sign-in / consent screen.
+function logOut() {
+  if (!confirm('Log out of this parent account? Your child’s progress on this device is kept.')) return;
+  try {
+    const token = S && S.sessionToken;
+    if (token && window.AI_PROXY) {
+      fetch(window.AI_PROXY + '/auth/logout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sessionToken: token }), keepalive: true }).catch(() => {});
+    }
+  } catch (_e) { /* noop */ }
+  S.sessionToken = null; S.sessionEmail = null; S.subStatus = null; S.coppaConsent = false;
+  saveS();
   location.reload();
 }
 
@@ -603,7 +624,7 @@ async function requestConsentCode() {
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { errEl.textContent = 'Please enter a valid email address.'; return; }
   const btn = document.getElementById('coppa-send'); const label = btn.textContent; btn.disabled = true; btn.textContent = 'Sending…';
   try {
-    const r = await fetch(window.AI_PROXY + '/consent/request', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email }) });
+    const r = await fetch(window.AI_PROXY + '/auth/request', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email }) });
     const d = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(d.error || 'Could not send the code.');
     _consentEmail = email;
@@ -620,10 +641,12 @@ async function verifyConsentCode() {
   if (!/^\d{6}$/.test(code)) { errEl.textContent = 'Enter the 6-digit code we emailed you.'; return; }
   const btn = document.getElementById('coppa-verify'); const label = btn.textContent; btn.disabled = true; btn.textContent = 'Verifying…';
   try {
-    const r = await fetch(window.AI_PROXY + '/consent/verify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: _consentEmail, code }) });
+    const r = await fetch(window.AI_PROXY + '/auth/verify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: _consentEmail, code }) });
     const d = await r.json().catch(() => ({}));
-    if (!r.ok || !d.consented) throw new Error(d.error || 'Verification failed. Please try again.');
-    S.coppaConsent = true; S.consentToken = d.token || null; S.consentAt = new Date().toISOString(); S.consentPolicy = d.policyVersion || null;
+    if (!r.ok || !d.ok) throw new Error(d.error || 'Verification failed. Please try again.');
+    // Verifying the email both records consent AND signs the parent in (session).
+    S.coppaConsent = true; S.consentAt = new Date().toISOString(); S.consentPolicy = d.consentPolicy || null;
+    S.sessionToken = d.sessionToken || null; S.sessionEmail = d.email || _consentEmail; S.subStatus = (d.subscription && d.subscription.status) || 'none';
     saveS();
     document.getElementById('ov-coppa').classList.remove('open');
     startApp();

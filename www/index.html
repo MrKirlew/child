@@ -238,6 +238,10 @@
   <div class="ds">📈 Activity by Subject</div><div id="d-bars"></div>
   <div id="d-math"></div>
   <div class="sep"></div>
+  <div class="fl" style="margin-bottom:4px">👤 Parent account</div>
+  <p id="acct-email" style="font-size:12px;color:var(--muted);margin-bottom:8px">—</p>
+  <button class="sbt sc" onclick="logOut()" style="margin-bottom:10px">Log out</button>
+  <div class="sep"></div>
   <button class="sbt sc" onclick="openChgPin()" style="margin-bottom:6px">🔒 Change PIN</button>
   <button class="sbt sc" onclick="deleteAllData()" style="margin-bottom:6px;color:#B91C1C;border-color:#FCA5A5">🗑️ Delete all data</button>
   <button class="sbt sc" onclick="closeAll()">Close</button>
@@ -342,7 +346,7 @@ let S={
   ex:{Spelling:{c:0,t:0},Grammar:{c:0,t:0},Comprehension:{c:0,t:0},Astrology:{c:0,t:0},Geology:{c:0,t:0},Biology:{c:0,t:0},Science:{c:0,t:0},Technology:{c:0,t:0},Engineering:{c:0,t:0},Math:{c:0,t:0}},
   streak:0,bestStreak:0,totalEx:0,
   earnedBadges:[],recentEx:[],recentQ:[],lastQuestions:[],lastActiveAt:null,dailyCnt:{},_wrongStreak:{},_toastShown:{},chatHist:[],busy:false,
-  consentToken:null,consentAt:null,consentPolicy:null
+  consentAt:null,consentPolicy:null,sessionToken:null,sessionEmail:null,subStatus:null
 };
 function saveS(){try{const {chatHist,busy,...r}=S;localStorage.setItem('kai5',JSON.stringify(r));}catch(e){}} // eslint-disable-line no-empty -- storage quota
 function loadS(){try{const d=localStorage.getItem('kai5');if(d)Object.assign(S,JSON.parse(d));}catch(e){}} // eslint-disable-line no-empty -- corrupt storage
