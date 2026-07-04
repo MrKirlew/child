@@ -113,4 +113,19 @@ Legend — Status: ✅ closed · 🟡 in progress · 🔴 open · ⚖️ needs l
 - ✅ **Phase 6 (a11y/AI) — DONE** (`ad2ffbb`): A1–A4, G8.
 - **⚖️ To counsel:** C2, C4, C5, S6, G2, G5 + all §6. See [`LEGAL_HANDOFF.md`](./LEGAL_HANDOFF.md).
 
-**Owner actions still required:** (1) delete `stripe_backup_code.txt` from disk (now gitignored so it won't commit/upload, but still a plaintext secret on the machine); (2) fill `[TBD]` legal entity/address in privacy.html/terms.html/coppa-direct-notice.md; (3) engage children's-privacy counsel / COPPA Safe Harbor. *(Resend + email consent are now fully wired: RESEND_API_KEY + verified ollietutor.com + CONSENT_EMAIL_FROM, real-parent delivery confirmed.)* *Note: production now serves from the `ollie` Vercel project → `www.ollietutor.com` (+ `forthechild.vercel.app`). Consider updating `www.index.html` AI_PROXY to `ollietutor.com` eventually.*
+**Owner actions still required:** (1) delete `stripe_backup_code.txt` from disk (now gitignored so it won't commit/upload, but still a plaintext secret on the machine); (2) fill `[TBD]` legal entity/address in privacy.html/terms.html/coppa-direct-notice.md; (3) engage children's-privacy counsel / COPPA Safe Harbor. *(Resend + email consent are now fully wired: RESEND_API_KEY + verified ollietutor.com + CONSENT_EMAIL_FROM, real-parent delivery confirmed.)*
+
+## 9. Parent accounts + subscriptions (new surface — 2026-07-03)
+
+Added a **parent-only** account (passwordless email login) + **Stripe** subscriptions ("web-checkout / app-unlocks" to stay Google-Play-safe; the Android app never sells in-app). Child side stays no-account/no-PII.
+
+| # | Item | Status | Note |
+|---|---|---|---|
+| P1 | Parent email now stored server-side (account) | 🟡 | Disclosed in privacy.html (Parent account & subscriptions). Deletable via dashboard → server erasure (`/auth/delete`). |
+| P2 | New processors: Resend, Upstash, **Stripe** | ✅ | All named in privacy.html service-providers. Stripe handles cards (we store only status). |
+| P3 | PCI DSS | ✅(scope-min) | Stripe Checkout hosted pages → SAQ-A minimal scope; we never touch card data. ⚖️ counsel confirm. |
+| P4 | Auto-renewal disclosure (e.g., CA ARL) | ⚖️ | Terms updated with recurring/auto-renew + cancel; `[TBD]` price + refund policy; **counsel to finalize**. |
+| P5 | Session security | ✅ | Opaque random tokens in Upstash, sliding TTL, revocable (logout/delete). |
+| P6 | Sessions/entitlement source of truth | ✅ | Stripe webhook (signature-verified, idempotent) is the only entitlement grant. |
+
+**⚖️ To counsel (payments):** VPC sufficiency with a parent account, auto-renewal law compliance, refund policy, and confirming SAQ-A PCI scope. *Note: production now serves from the `ollie` Vercel project → `www.ollietutor.com` (+ `forthechild.vercel.app`). Consider updating `www.index.html` AI_PROXY to `ollietutor.com` eventually.*
