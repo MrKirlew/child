@@ -134,8 +134,15 @@ function _renderDash() {
   }
 }
 
+function _renderAccount() {
+  const ae = document.getElementById('acct-email');
+  if (ae) ae.textContent = S.sessionEmail ? 'Signed in as ' + S.sessionEmail : 'Not signed in';
+  const btn = document.getElementById('acct-sub-btn');
+  if (btn) btn.textContent = isPremium() ? '⭐ Premium — manage subscription' : '⭐ Upgrade to Premium';
+}
 function openDash() {
   _renderDash();
+  _renderAccount();
   document.getElementById('ov-dash').classList.add('open');
   // Live sync: re-render whenever an activity event fires while the
   // dashboard is open. Captured to a handle on the modal so we can
@@ -294,11 +301,12 @@ async function saveChgPin() {
 // the consent gate reappears (revocation). Nothing was stored on our servers.
 function deleteAllData() {
   if (!confirm('Delete ALL of your child’s data on this device — progress, spelled words, settings, and PIN? This cannot be undone.')) return;
-  // Revoke the server-side consent record too, if we have a token (fire-and-forget; keepalive survives the reload).
+  // Erase the server-side account/consent/subscription records too, if signed in
+  // (fire-and-forget; keepalive survives the reload).
   try {
-    const token = S && S.consentToken;
+    const token = S && S.sessionToken;
     if (token && window.AI_PROXY) {
-      fetch(window.AI_PROXY + '/consent/revoke', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token }), keepalive: true }).catch(() => {});
+      fetch(window.AI_PROXY + '/auth/delete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sessionToken: token }), keepalive: true }).catch(() => {});
     }
   } catch (_e) { /* noop */ }
   try { localStorage.removeItem('kai5'); } catch (_e) { /* noop */ }
@@ -307,6 +315,88 @@ function deleteAllData() {
   if (typeof Logger !== 'undefined') Logger.warn('data.delete_all', {});
   location.reload();
 }
+
+// Log out (end the parent session) WITHOUT deleting the child's on-device data.
+// Returns to the sign-in / consent screen.
+function logOut() {
+  if (!confirm('Log out of this parent account? Your child’s progress on this device is kept.')) return;
+  try {
+    const token = S && S.sessionToken;
+    if (token && window.AI_PROXY) {
+      fetch(window.AI_PROXY + '/auth/logout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sessionToken: token }), keepalive: true }).catch(() => {});
+    }
+  } catch (_e) { /* noop */ }
+  S.sessionToken = null; S.sessionEmail = null; S.subStatus = null; S.coppaConsent = false;
+  saveS();
+  location.reload();
+}
+
+/* ══ SUBSCRIPTION / PAYWALL — Free: Exercises + Spell + capped Learn · Premium: unlimited ══ */
+const FREE_LEARN_CAP = 10; // free Learn AI turns per day
+function isPremium() { return S.subStatus === 'active' || S.subStatus === 'trialing'; }
+function _isNativeApp() { return !!window.Capacitor; }
+function _today() { return new Date().toISOString().slice(0, 10); }
+function _learnCountToday() { return (S.learnDay && S.learnDay.date === _today()) ? (S.learnDay.count || 0) : 0; }
+
+// Gate a Learn AI turn: premium = unlimited; free = capped/day. Increments on allow,
+// shows an upgrade prompt when the free cap is hit. Returns true if allowed.
+function learnGate() {
+  if (isPremium()) return true;
+  const n = _learnCountToday();
+  if (n >= FREE_LEARN_CAP) { showUpgrade(); return false; }
+  S.learnDay = { date: _today(), count: n + 1 };
+  saveS();
+  return true;
+}
+
+// Refresh entitlement from the server (the webhook is the source of truth).
+async function refreshEntitlement() {
+  if (!S.sessionToken || !window.AI_PROXY) return;
+  try {
+    const r = await fetch(window.AI_PROXY + '/auth/session', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sessionToken: S.sessionToken }) });
+    if (!r.ok) return;
+    const d = await r.json().catch(() => ({}));
+    if (d.authenticated) { S.subStatus = (d.subscription && d.subscription.status) || 'none'; if (d.email) S.sessionEmail = d.email; saveS(); _renderAccount(); }
+  } catch (_e) { /* offline — keep cached */ }
+}
+
+// Upgrade / manage. Web: redirect to Stripe. Android: point to the website (Play-policy-safe).
+// Premium → billing portal; Free → open the Upgrade overlay (both plans).
+async function manageSubscription() {
+  if (!S.sessionToken) { addBub('ai', 'Open the parent area to manage your account.', {}); return; }
+  if (isPremium()) {
+    try {
+      const r = await fetch(window.AI_PROXY + '/stripe', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sessionToken: S.sessionToken, action: 'portal' }) });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok || !d.url) throw new Error(d.error || 'Could not open billing.');
+      window.location.href = d.url; // → Stripe Billing Portal
+    } catch (e) { alert(e.message); }
+    return;
+  }
+  openUpgrade();
+}
+
+// Show the two-plan upgrade sheet (web) or the "subscribe on the website" note (Android).
+function openUpgrade() {
+  const web = document.getElementById('upg-web'), nat = document.getElementById('upg-native');
+  if (web && nat) { const native = _isNativeApp(); web.style.display = native ? 'none' : 'block'; nat.style.display = native ? 'block' : 'none'; }
+  const ov = document.getElementById('ov-upgrade');
+  if (ov) ov.classList.add('open');
+}
+
+// Redirect to Stripe Checkout for the chosen plan (web only).
+async function chooseUpgrade(plan) {
+  if (!S.sessionToken) { alert('Open the parent area to manage your account.'); return; }
+  try {
+    const r = await fetch(window.AI_PROXY + '/stripe', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sessionToken: S.sessionToken, action: 'checkout', plan }) });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok || !d.url) throw new Error(d.error || 'Could not open checkout.');
+    window.location.href = d.url; // → Stripe Checkout
+  } catch (e) { alert(e.message); }
+}
+
+// Daily Learn-cap hit → open the same upgrade sheet.
+function showUpgrade() { openUpgrade(); }
 
 /* ══ TYPED MESSAGE (Learn tab) ══ */
 async function sendTyped() {
@@ -321,11 +411,13 @@ async function sendTyped() {
     return;
   }
   // Typed spelling requests should use the deterministic spell flow even when
-  // the Learn websocket is already warm.
+  // the Learn websocket is already warm. (Spelling is free — not Learn-capped.)
   if (SpellTools.extractSpellTarget(txt)) {
     sendL(txt);
     return;
   }
+  // Free tier: cap Learn AI turns per day (Premium = unlimited).
+  if (typeof learnGate === 'function' && !learnGate()) return;
   // Send through Live API if connected, otherwise REST fallback
   if (sendLiveText(txt, { userVisibleText: txt })) return;
   // REST fallback
@@ -603,7 +695,7 @@ async function requestConsentCode() {
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { errEl.textContent = 'Please enter a valid email address.'; return; }
   const btn = document.getElementById('coppa-send'); const label = btn.textContent; btn.disabled = true; btn.textContent = 'Sending…';
   try {
-    const r = await fetch(window.AI_PROXY + '/consent/request', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email }) });
+    const r = await fetch(window.AI_PROXY + '/auth/request', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email }) });
     const d = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(d.error || 'Could not send the code.');
     _consentEmail = email;
@@ -620,10 +712,12 @@ async function verifyConsentCode() {
   if (!/^\d{6}$/.test(code)) { errEl.textContent = 'Enter the 6-digit code we emailed you.'; return; }
   const btn = document.getElementById('coppa-verify'); const label = btn.textContent; btn.disabled = true; btn.textContent = 'Verifying…';
   try {
-    const r = await fetch(window.AI_PROXY + '/consent/verify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: _consentEmail, code }) });
+    const r = await fetch(window.AI_PROXY + '/auth/verify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: _consentEmail, code }) });
     const d = await r.json().catch(() => ({}));
-    if (!r.ok || !d.consented) throw new Error(d.error || 'Verification failed. Please try again.');
-    S.coppaConsent = true; S.consentToken = d.token || null; S.consentAt = new Date().toISOString(); S.consentPolicy = d.policyVersion || null;
+    if (!r.ok || !d.ok) throw new Error(d.error || 'Verification failed. Please try again.');
+    // Verifying the email both records consent AND signs the parent in (session).
+    S.coppaConsent = true; S.consentAt = new Date().toISOString(); S.consentPolicy = d.consentPolicy || null;
+    S.sessionToken = d.sessionToken || null; S.sessionEmail = d.email || _consentEmail; S.subStatus = (d.subscription && d.subscription.status) || 'none';
     saveS();
     document.getElementById('ov-coppa').classList.remove('open');
     startApp();
@@ -645,6 +739,15 @@ async function startApp() {
   // Instant readiness — no API call on startup, no waiting for Ollie to greet
   document.getElementById('slbl').textContent = 'Tap 🎤 to talk to Ollie';
   addBub('ai', 'Hi! I\'m Ollie the Octopus! Tap the 🎤 button to talk to me, or go to Exercises and Spell for fun practice!', { lessonType: 'Welcome' });
+  // Refresh subscription entitlement (webhook is source of truth); handle Stripe return.
+  refreshEntitlement().then(() => {
+    try {
+      if (/[?&]upgraded=1/.test(location.search)) {
+        if (typeof showToast === 'function') showToast('🎉 Welcome to Premium! Enjoy unlimited Learn.');
+        history.replaceState(null, '', location.pathname);
+      }
+    } catch (_e) { /* noop */ }
+  });
 }
 (function init() {
   if (S.coppaConsent) { startApp(); }

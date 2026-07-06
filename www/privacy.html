@@ -44,15 +44,19 @@ th{background:#EEF2FF}
 <tr><td><strong>Voice audio</strong>, when a child uses the live-voice microphone</td><td>Streamed live; not stored</td><td><strong>Yes — the audio is sent to Google's Gemini Live service</strong></td></tr>
 <tr><td>Parent PIN</td><td>Stored on the device as a SHA-256 hash</td><td>No</td></tr>
 <tr><td>Technical connection data (e.g., IP address) and app error reports</td><td>Transient</td><td>Yes — inherent to any internet request; see providers below</td></tr>
-<tr><td>Parent email (only if you complete email-verified consent)</td><td>Minimal verification record</td><td>Yes — to our email provider and consent record</td></tr>
+<tr><td><strong>Parent email + account</strong> (when a parent verifies by email / creates a parent account)</td><td>Stored server-side (email + a login session + consent record) to run your account and any subscription</td><td>Yes — to our email provider, account store, and payment processor</td></tr>
+<tr><td><strong>Subscription status</strong> (if you subscribe)</td><td>Stored server-side (plan/status); card details are held by Stripe, not us</td><td>Yes — to/from Stripe</td></tr>
 </table>
-<p>Because voice audio and IP address can identify a device or person, we treat them as personal information even though we collect no name or account. We describe them plainly here rather than claim "nothing is transmitted."</p>
+<p>Because voice audio and IP address can identify a device or person, we treat them as personal information even though we collect no name from the child. The <em>parent account</em> is optional and separate — the child never logs in. We describe all of this plainly rather than claim "nothing is transmitted."</p>
 
 <h2>Service providers (third parties)</h2>
 <ul>
 <li><strong>Google (Gemini AI, Gemini Live, Text-to-Speech)</strong> — receives the child's typed text, live voice audio, and text to speak, in order to generate educational responses. Governed by <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Google's Privacy Policy</a>.</li>
 <li><strong>Vercel</strong> — hosts the App's proxy server; processes connection metadata and short-lived request logs.</li>
 <li><strong>Sentry</strong> — receives app error/diagnostic reports so we can fix crashes. Configured to minimize personal data (no session replay; user/cookie data stripped). It is a third-party SDK, disclosed here.</li>
+<li><strong>Resend</strong> — sends the one-time email codes used to verify a parent and sign in. Receives the parent's email address.</li>
+<li><strong>Upstash</strong> — stores the minimal parent account, consent record, and subscription status (keyed by a hashed email).</li>
+<li><strong>Stripe</strong> — processes subscription payments if a parent subscribes. Stripe handles all card/payment details on its own hosted pages; <strong>we never see or store card numbers</strong>. Governed by <a href="https://stripe.com/privacy" target="_blank" rel="noopener">Stripe's Privacy Policy</a>.</li>
 <li><strong>Display fonts</strong> — are self-hosted with the App; loading them does not contact Google or any third party.</li>
 </ul>
 <p>We do <strong>not</strong> use advertising networks, ad targeting, analytics/tracking SDKs, or social-media integrations, and we do <strong>not</strong> sell or "share" (as defined by California law) personal information.</p>
@@ -68,6 +72,10 @@ th{background:#EEF2FF}
 <h2>Parental consent</h2>
 <p>Before a child uses features that transmit data (including live voice), the App asks a parent or guardian to provide consent through an <strong>email-verification</strong> step: the parent enters an email address and confirms a one-time code we send to it. We store only a minimal record of that consent (a hashed email, a timestamp, and the policy version). Parents can revoke consent at any time (see below), which deletes the record.</p>
 <p>We are continuing to evaluate, with counsel, whether additional verifiable-parental-consent measures are required for particular data (such as voice). This policy will be updated accordingly.</p>
+
+<h2>Parent account & subscriptions</h2>
+<p>Verifying your email creates a <strong>parent account</strong> (only the parent — never the child). We store your email address, a login session token, and your consent record so you can sign in, manage settings, and — if you choose — subscribe. You can <strong>log out</strong> (ends the session) or <strong>delete your account and all data</strong> from the parent dashboard at any time.</p>
+<p>If you subscribe to a paid plan, payment is handled by <strong>Stripe</strong> on its secure hosted pages; we store only your subscription status (plan and whether it is active), never card details. You can update or cancel your subscription through the billing portal we link to. Cancellation stops future charges; deleting your account does not automatically cancel an active subscription, so cancel first if you wish to stop billing.</p>
 
 <h2>Parental rights</h2>
 <p>Parents and guardians may, through the PIN-protected parent dashboard or by contacting us:</p>

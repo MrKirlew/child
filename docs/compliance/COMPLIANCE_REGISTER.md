@@ -108,9 +108,24 @@ Legend — Status: ✅ closed · 🟡 in progress · 🔴 open · ⚖️ needs l
 - ✅ **Phase 1 (docs) — DONE** (`17e15cb`): C1, C3, S5, G1, G5, G6. Register + accurate privacy policy + ToS + DPIA + COPPA notice + legal handoff.
 - ✅ **Phase 2 (safety) — DONE** (`18ea1e4`, issue #2): safetySettings on all 3 AI paths, blockReason handling, blocklist + output moderation, 29 tests.
 - 🟡 **Phase 3 (voice/security) — KEY FIX DONE** (`2de0b62`, deployed to prod + verified on-device): H1, H2, C9 closed (ephemeral tokens, CORS gated). Remaining: consent-gate the live mic (depends on Phase 4).
-- ✅ **Phase 4 (consent) — DONE, deployed + verified on-device** (`c78c4bf` + deploy): C2, C8, G3. Email-plus consent live in production — real Resend email + Upstash store + verify, driven end-to-end on the Pixel (email → code → consent → app unlock). **For real parents:** owner must verify `ollietutor.com` in Resend + set `CONSENT_EMAIL_FROM` (currently test-mode sender only reaches the Resend account owner). ⚖️ counsel to confirm email-plus suffices as VPC.
+- ✅ **Phase 4 (consent) — DONE + production-ready for real parents** (`c78c4bf` + deploys): C2, C8, G3. Email-plus consent live — real Resend email + Upstash store + verify, driven end-to-end on the Pixel (email → code → consent → unlock). **`ollietutor.com` verified in Resend + `CONSENT_EMAIL_FROM=Ollie <noreply@ollietutor.com>` set; real-parent delivery confirmed** (200 sending to a non-owner address). ⚖️ counsel to confirm email-plus suffices as VPC.
 - ✅ **Phase 5 (deletion/minimize) — DONE** (`a6feb4c`): C6, C7, S3, H3(self-host fonts + delete-all + default-PIN removal). H3 Stripe file = **owner action**.
 - ✅ **Phase 6 (a11y/AI) — DONE** (`ad2ffbb`): A1–A4, G8.
 - **⚖️ To counsel:** C2, C4, C5, S6, G2, G5 + all §6. See [`LEGAL_HANDOFF.md`](./LEGAL_HANDOFF.md).
 
-**Owner actions still required:** (1) delete `stripe_backup_code.txt` from disk (now gitignored so it won't commit/upload, but still a plaintext secret on the machine); (2) add `RESEND_API_KEY` + a verified sender (`CONSENT_EMAIL_FROM`, e.g. `Ollie <noreply@ollietutor.com>` — verify ollietutor.com in Resend) to Vercel, then `vercel --prod` + rebuild the app so the device shows the email-consent UI; (3) fill `[TBD]` legal entity/address in privacy.html/terms.html/coppa-direct-notice.md; (4) engage children's-privacy counsel / COPPA Safe Harbor. *Note: production now serves from the `ollie` Vercel project → `www.ollietutor.com` (+ `forthechild.vercel.app`). Consider updating `www.index.html` AI_PROXY to `ollietutor.com` eventually.*
+**Owner actions still required:** (1) delete `stripe_backup_code.txt` from disk (now gitignored so it won't commit/upload, but still a plaintext secret on the machine); (2) fill `[TBD]` legal entity/address in privacy.html/terms.html/coppa-direct-notice.md; (3) engage children's-privacy counsel / COPPA Safe Harbor. *(Resend + email consent are now fully wired: RESEND_API_KEY + verified ollietutor.com + CONSENT_EMAIL_FROM, real-parent delivery confirmed.)*
+
+## 9. Parent accounts + subscriptions (new surface — 2026-07-03)
+
+Added a **parent-only** account (passwordless email login) + **Stripe** subscriptions ("web-checkout / app-unlocks" to stay Google-Play-safe; the Android app never sells in-app). Child side stays no-account/no-PII.
+
+| # | Item | Status | Note |
+|---|---|---|---|
+| P1 | Parent email now stored server-side (account) | 🟡 | Disclosed in privacy.html (Parent account & subscriptions). Deletable via dashboard → server erasure (`/auth/delete`). |
+| P2 | New processors: Resend, Upstash, **Stripe** | ✅ | All named in privacy.html service-providers. Stripe handles cards (we store only status). |
+| P3 | PCI DSS | ✅(scope-min) | Stripe Checkout hosted pages → SAQ-A minimal scope; we never touch card data. ⚖️ counsel confirm. |
+| P4 | Auto-renewal disclosure (e.g., CA ARL) | ⚖️ | Terms updated with recurring/auto-renew + cancel; `[TBD]` price + refund policy; **counsel to finalize**. |
+| P5 | Session security | ✅ | Opaque random tokens in Upstash, sliding TTL, revocable (logout/delete). |
+| P6 | Sessions/entitlement source of truth | ✅ | Stripe webhook (signature-verified, idempotent) is the only entitlement grant. |
+
+**⚖️ To counsel (payments):** VPC sufficiency with a parent account, auto-renewal law compliance, refund policy, and confirming SAQ-A PCI scope. *Note: production now serves from the `ollie` Vercel project → `www.ollietutor.com` (+ `forthechild.vercel.app`). Consider updating `www.index.html` AI_PROXY to `ollietutor.com` eventually.*
