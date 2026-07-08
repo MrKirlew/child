@@ -102,6 +102,7 @@
         <button id="stopb" onclick="stopAll()" aria-label="Stop speaking">⏹</button>
         <input id="linp" class="si" placeholder="Type a message..." aria-label="Type a message to Ollie" onkeydown="if(event.key==='Enter'){sendTyped();event.preventDefault();}"/>
         <button id="lsend" onclick="sendTyped()" aria-label="Send message">➤</button>
+        <button id="hw-mic" onclick="HW.toggleMic()" aria-label="Speak your answer" hidden>🎤</button>
         <div class="mic-stage" id="lmic-stage"><button id="lmic" onclick="togLMic()" aria-label="Microphone — tap to talk to Ollie">🎤</button></div>
       </div>
     </div>

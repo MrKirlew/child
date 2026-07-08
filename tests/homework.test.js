@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 
 // homework.js is a browser script with a Node/UMD export of its pure helpers.
 const HW = await import('../www/js/homework.js');
@@ -109,5 +109,18 @@ describe('system prompts enforce the core rule (regression guard)', () => {
   it('analyze prompt refuses non-assignment / unsafe images', () => {
     expect(HW.HWSYS_ANALYZE).toContain('isAssignment');
     expect(HW.HWSYS_ANALYZE.toLowerCase()).toContain('not a school assignment');
+  });
+});
+
+describe('voice answers (Web Speech STT)', () => {
+  it('toggleMic is a safe no-op when speech recognition is unavailable', async () => {
+    globalThis.window = {}; // no SpeechRecognition, no Capacitor
+    vi.resetModules();
+    await import('../www/js/homework.js'); // re-executes IIFE → sets window.HW
+    const hw = globalThis.window.HW;
+    expect(typeof hw.toggleMic).toBe('function');
+    await expect(hw.toggleMic()).resolves.toBeUndefined(); // returns, does not throw
+    expect(hw.micActive).toBe(false);
+    delete globalThis.window;
   });
 });
