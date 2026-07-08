@@ -82,7 +82,7 @@ You have no lawyer yet; this posture is **defensible but not certified**. See `d
 
 - [ ] **Delete `stripe_backup_code.txt`** from your computer (it's a real Stripe recovery code sitting in the project folder). It's gitignored so it won't be committed/uploaded — but it's still a plaintext secret on disk. Move it to a password manager.
 - [ ] **Confirm `SENTRY_DSN` is set** in Vercel if you want error tracking live (optional but recommended for a 99% uptime goal).
-- [ ] (Optional) **Point the app at `ollietutor.com`** — the app currently calls `forthechild.vercel.app` (works fine, both are your project). Cleaner to move `window.AI_PROXY` to `https://www.ollietutor.com/api`. Tell me and I'll change it.
+- [x] **Point the app at `ollietutor.com`** — done: `window.AI_PROXY` now targets `https://www.ollietutor.com/api` (SW cache bumped to `v4` so returning PWA users repoint; `forthechild.vercel.app` still works as an alias). _CI's post-deploy health probe still curls `forthechild.vercel.app/api/health` — harmless (same project). Say the word to switch that too._
 
 ---
 
