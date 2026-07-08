@@ -2,7 +2,7 @@
 // network-first for /api/* (so the kid always gets fresh AI responses).
 // Bump CACHE_NAME on each release to invalidate stale shells.
 
-const CACHE_NAME = 'ollie-shell-v2';
+const CACHE_NAME = 'ollie-shell-v3';
 const SHELL = [
   '/',
   '/index.html',
@@ -14,6 +14,7 @@ const SHELL = [
   '/js/exercises.js',
   '/js/progress.js',
   '/js/ui.js',
+  '/js/homework.js',
   '/js/observability.js',
   '/js/logger.js',
   '/manifest.json',

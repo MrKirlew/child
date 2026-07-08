@@ -1,5 +1,6 @@
 const { withSentry } = require('../_observability');
 const Safety = require('../../www/js/safety.js');
+const { getSession, readSub, isActive } = require('../_auth');
 
 // Text generation models — native audio models don't support text output
 // Live audio (gemini-3.1-flash-live-preview) is used via Live API WebSocket only
@@ -25,6 +26,13 @@ function logSafetyBlock(reason, model) {
   }));
 }
 
+// Log a Homework Helper entitlement denial (no child content — reason only).
+function logHomeworkDenied(reason) {
+  console.log(JSON.stringify({
+    ts: new Date().toISOString(), level: 'info', event: 'homework.premium_denied', reason,
+  }));
+}
+
 async function tryGenerate(model, body, apiKey) {
   const url = `${API_BASE}/${model}:generateContent?key=${apiKey}`;
   const r = await fetch(url, {
@@ -46,7 +54,27 @@ const handler = async (req, res) => {
   const API_KEY = process.env.GOOGLE_AI_KEY;
   if (!API_KEY) return res.status(500).json({ error: 'API key not configured' });
 
-  const body = { ...req.body, safetySettings: SAFETY };
+  // Premium/vision gate: the Homework Helper sends feature:'homework'. Verify the
+  // parent's subscription server-side (the client gate is bypassable, and vision
+  // calls are pricier). Requests with no `feature` field are unaffected.
+  const { feature, sessionToken, ...rest } = req.body || {};
+  if (feature === 'homework') {
+    try {
+      const session = await getSession(sessionToken);
+      const sub = session ? await readSub(session.he) : null;
+      if (!session || !isActive(sub)) {
+        logHomeworkDenied(session ? 'not_subscribed' : 'no_session');
+        return res.status(402).json({ error: 'premium_required' });
+      }
+    } catch (_e) {
+      // Entitlement store unreachable — fail closed, but distinguish from a hard
+      // paywall so the client shows "try again", not an upsell.
+      return res.status(503).json({ error: 'entitlement_unavailable' });
+    }
+  }
+
+  // Strip our routing fields before forwarding — Gemini rejects unknown top-level keys.
+  const body = { ...rest, safetySettings: SAFETY };
 
   // Try primary model 3 times with exponential backoff (1s, 2s, 4s)
   for (let attempt = 0; attempt < 3; attempt++) {

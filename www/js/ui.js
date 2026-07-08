@@ -404,6 +404,9 @@ async function sendTyped() {
   const txt = inp.value.trim();
   if (!txt) return;
   inp.value = '';
+  // Homework Helper owns the Learn input bar while active — route the child's
+  // answer to the Socratic coach (it runs its own safety filter + gating).
+  if (window.HW && window.HW.active) { window.HW.sendAnswer(txt); return; }
   // Pre-model input filter — never echo or send inappropriate input.
   if (typeof Safety !== 'undefined' && !Safety.checkInput(txt).allowed) {
     if (typeof Logger !== 'undefined') Logger.warn('safety.input_filtered', { path: 'typed' });

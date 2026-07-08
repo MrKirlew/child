@@ -76,7 +76,28 @@
         <div id="vcw" aria-hidden="true"><canvas id="vc"></canvas></div>
         <div id="vlbl" aria-hidden="true">🎵 AUDIO VISUALIZER</div>
       </div>
+      <button id="hw-open" class="hw-open" onclick="HW.open()" aria-label="Open Homework Helper — take a photo of your assignment">📸 Homework Helper<span class="hw-open-sub">Snap your assignment — do it together</span></button>
       <div id="chat" aria-live="polite"><div id="cscroll"></div></div>
+      <div id="hw" hidden>
+        <div id="hw-head">
+          <button id="hw-back" onclick="HW.close()" aria-label="Back to Learn">‹ Back</button>
+          <div id="hw-title">📸 Homework Helper</div>
+        </div>
+        <div id="hw-capture">
+          <div id="hw-intro">Take a photo of each page of your homework, then tap Start. Ollie helps you — but <strong>you</strong> do the thinking! 🧠</div>
+          <div id="hw-tray"></div>
+          <div id="hw-decline" class="hw-decline" hidden></div>
+          <div id="hw-cap-btns">
+            <button id="hw-add" class="sbt sc" onclick="HW.pickPage()">➕ Add a page</button>
+            <button id="hw-start" class="sbt" onclick="HW.start()" disabled>Start — help me! 🚀</button>
+          </div>
+          <input id="hw-file" type="file" accept="image/*" capture="environment" multiple onchange="HW.onFiles(event)" hidden/>
+        </div>
+        <div id="hw-coach" hidden>
+          <div id="hw-progress" aria-live="polite"></div>
+          <div id="hw-chat" aria-live="polite"></div>
+        </div>
+      </div>
       <div id="lbot">
         <button id="stopb" onclick="stopAll()" aria-label="Stop speaking">⏹</button>
         <input id="linp" class="si" placeholder="Type a message..." aria-label="Type a message to Ollie" onkeydown="if(event.key==='Enter'){sendTyped();event.preventDefault();}"/>
@@ -383,8 +404,8 @@ async function hashPin(pin){
 /* ══ UTILITIES ══ */
 function esc(t){return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function fmt(t){return esc(t).replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\n/g,'<br>');}
-function addBub(role,txt,ex){
-  const sc=document.getElementById('cscroll');const d=document.createElement('div');d.className='mr'+(role==='user'?' u':'');
+function addBub(role,txt,ex,scrollId){
+  const sc=document.getElementById(scrollId||'cscroll');const d=document.createElement('div');d.className='mr'+(role==='user'?' u':'');
   let mel=null;
   if(role==='user'){d.innerHTML=`<div class="mav">👦</div><div class="mb us">${fmt(txt)}</div>`;}
   else{
@@ -453,6 +474,7 @@ const VIZ=(()=>{
 <script src="js/exercises.js"></script>
 <script src="js/progress.js"></script>
 <script src="js/ui.js"></script>
+<script src="js/homework.js"></script>
 <script src="js/a11y.js"></script>
 </body>
 </html>
