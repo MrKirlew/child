@@ -1,6 +1,6 @@
 # Ollie — What's Left To Do (Launch Checklist)
 
-_Last updated: 2026-07-06. This is your running "what's left" list. Check items off as you go. Items are grouped by priority: **🔴 Before taking real customers** → **⚖️ Legal** → **🧹 Housekeeping** → **🟢 Optional / growth**._
+_Last updated: 2026-07-07. This is your running "what's left" list. Check items off as you go. Items are grouped by priority: **🔴 Before taking real customers** → **⚖️ Legal** → **🧹 Housekeeping** → **🟢 Optional / growth**._
 
 ---
 
@@ -9,6 +9,7 @@ _Last updated: 2026-07-06. This is your running "what's left" list. Check items 
 So you know what's *not* on this list:
 
 - **App** — full K-6 tutor (Learn / Exercises / Spell / Progress), Ollie octopus + Candy Pop design, live on web + Android.
+- **Homework Helper (NEW · Premium)** — in Learn, a child photographs a (multi-page) assignment and Ollie coaches them Socratically, **withholding the answer until they've answered every guiding question**; answers by typing **or 🎤 voice**. Premium-gated on both the client and the server; images reuse the existing AI endpoint (no new cost surface). **Built + deployed to production (web + Android).** *Behavior not yet walked end-to-end — see 🔴 step 4.*
 - **Child-safety** — content filtering on all 3 AI paths, safe-redirect on blocks.
 - **Privacy/compliance foundation** — accurate privacy policy, Terms, COPPA direct notice, DPIA, compliance register (all in `docs/compliance/`).
 - **Parent accounts** — passwordless email login / logout, account section in the parent dashboard.
@@ -50,6 +51,19 @@ This is the only way to exercise the true **card → Stripe → webhook → unlo
 My verification runs created a few empty test customers in Stripe.
 - [ ] Stripe → **Customers** → delete any with these emails: `relwik+billingverify`, `relwik+billingverify2`, `relwik+billingverify3`, `relwik+finalcheck`, `relwik+authtest` (all `@gmail.com`).
 
+### 4. Walk the new Homework Helper (premium feature) — ~5 min
+This feature is **live** but its AI coaching hasn't been walked end-to-end (it needs a real worksheet + Premium + the live vision model — nothing I can automate). It's Premium-only, so do this **with the account you upgraded in step 2, before you refund/cancel.** On **https://www.ollietutor.com** (or the Android app), open **Learn → 📸 Homework Helper**:
+
+- [ ] Add a photo of a real worksheet (or a clear photo of any K-6 problem) → **Start.** Ollie should read it and **ask a guiding question — not give the answer.**
+- [ ] Type **"just tell me the answer"** → Ollie should **warmly refuse and give a hint** instead.
+- [ ] Answer Ollie's questions → the answer stays **locked (🔒)** until you've passed every checkpoint, then it **unlocks (🔓) and celebrates.**
+- [ ] Add **two pages** → both pages' problems get addressed.
+- [ ] Point the camera at something that **isn't** an assignment (a toy, a face) → Ollie should gently **decline and ask for a retake.**
+- [ ] Tap the **🎤** and speak an answer → it's transcribed and sent; confirm **no repeated beeps** and it isn't sent twice.
+- [ ] On a **free** account, tapping **📸 Homework Helper** shows the upgrade prompt instead — i.e. it's correctly Premium-gated.
+
+> Voice note: the 🎤 uses your browser/phone's speech engine — works on **web + Android**; on iPhone Safari it falls back to typing (iOS isn't a shipped target yet anyway). If anything misbehaves, tell me what you saw and I'll fix it.
+
 ---
 
 ## ⚖️ Legal — before public launch / marketing
@@ -80,7 +94,8 @@ You have no lawyer yet; this posture is **defensible but not certified**. See `d
 - [ ] **"Access" program** — $0.99/mo for families on government assistance (copies Ello; great goodwill for a mission-driven ADHD product).
 
 **Product / platform:**
-- [ ] **iOS app** — not yet scaffolded (Android + web only today). iOS is the higher-willingness-to-pay surface.
+- [ ] **Homework Helper fast-follows** (optional polish): re-attach the page image on diagram-heavy problems for extra accuracy, and let the child add/retake pages mid-session. (I can build these.)
+- [ ] **iOS app** — not yet scaffolded (Android + web only today). iOS is the higher-willingness-to-pay surface. *(Also unlocks reliable Homework-Helper voice on iPhone — Safari's speech engine is the fallback path today.)*
 - [ ] **On-device Upgrade-screen check** — re-approve USB debugging on your phone and I'll verify the Upgrade overlay renders correctly on Android.
 - [ ] **Marketing** — the `marketing-strategy` skill can produce a full SEO/GEO + paid-acquisition + audience brief when you're ready to grow.
 
