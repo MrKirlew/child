@@ -376,7 +376,7 @@ body.listening-mode #score-bar{visibility:hidden}
 
 @media (prefers-reduced-motion: reduce){
   .kai-cd-bar{transition:none}
-  #osv,#tents,#lr,#strk-badge.hot,#lmic.on{animation:none !important}
+  #osv,#tents,#lr,#strk-badge.hot,#lmic.on,#hw-mic.on{animation:none !important}
   .mic-stage,.mic-stage.active{transition:none;transform:none}
   .hw-open:active{transform:none}
 }
@@ -422,3 +422,9 @@ body.mode-calm #hw:not([hidden]){background:#F7FCF9;border-color:#D5E8DE}
 body.mode-calm #hw-progress{background:#F0FAF5;border-color:#D5E8DE}
 body.mode-calm #hw-head{border-color:#D5E8DE}
 body.mode-calm .hw-open{background:linear-gradient(135deg,#C4A87C,#5B9B8A)}
+
+/* Homework voice-answer mic (in the Learn input bar; shown only in coaching) */
+#hw-mic:not([hidden]){width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#573BB0,#7B5BE0);border:none;cursor:pointer;font-size:20px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#fff;box-shadow:0 3px 14px rgba(124,58,237,.35)}
+#hw-mic.on{background:linear-gradient(135deg,#F43F5E,#F97316);box-shadow:0 4px 18px rgba(244,63,94,.4);animation:mpa 1s infinite}
+body.mode-night #hw-mic:not([hidden]){background:linear-gradient(135deg,#5B63D6,#7C83FD)}
+body.mode-calm #hw-mic:not([hidden]){background:linear-gradient(135deg,#5B9B8A,#7BC4B0)}

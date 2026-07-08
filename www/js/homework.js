@@ -200,6 +200,22 @@ Coach the child per your rules and return ONLY the JSON. Do NOT reveal the final
     });
   }
 
+  /* ── Voice answers (Web Speech STT) ──────────────────────────────── */
+
+  function _getSR() {
+    return (typeof window !== 'undefined') && (window.SpeechRecognition || window.webkitSpeechRecognition);
+  }
+
+  // Android WebView needs the app's RECORD_AUDIO granted before Web Speech works.
+  // Mirror speech.js's pattern (SpeechPlugin.requestMic). No-op on web browsers.
+  async function _ensureMicPermission() {
+    if (typeof window !== 'undefined' && window.IS_ANDROID && window.Capacitor &&
+        window.Capacitor.Plugins && window.Capacitor.Plugins.SpeechPlugin) {
+      const r = await window.Capacitor.Plugins.SpeechPlugin.requestMic({});
+      if (!r || !r.granted) throw new Error('mic denied');
+    }
+  }
+
   /* ── DOM helpers (scoped to the homework panel) ──────────────────── */
 
   function $(id) { return document.getElementById(id); }
@@ -247,6 +263,7 @@ Coach the child per your rules and return ONLY the JSON. Do NOT reveal the final
     // the Live mic, which isn't wired to homework) during capture.
     if (lbot) lbot.style.display = phase === 'coach' ? '' : 'none';
     const mic = $('lmic-stage'); if (mic) mic.style.display = phase === 'coach' ? 'none' : '';
+    const hwmic = $('hw-mic'); if (hwmic) hwmic.hidden = phase !== 'coach';
   }
 
   /* ── Flow object (browser) ───────────────────────────────────────── */
@@ -258,6 +275,10 @@ Coach the child per your rules and return ONLY the JSON. Do NOT reveal the final
     subject: null,
     transcript: [],
     state: { curProblemId: 1, checkpointTotal: 0, checkpointsPassed: 0, answerUnlocked: false },
+    micActive: false,
+    _recog: null,
+    _micText: '',
+    _suppressMicSend: false,
 
     open() {
       if (typeof isPremium === 'function' && !isPremium()) {
@@ -281,6 +302,7 @@ Coach the child per your rules and return ONLY the JSON. Do NOT reveal the final
 
     close() {
       this.active = false;
+      if (this.micActive) { this._suppressMicSend = true; this._stopMic(); this._finishMic(); }
       if (typeof stopAll === 'function') { try { stopAll(); } catch (_e) { /* ignore */ } }
       const chat = $('chat'); const viz = $('viz-card'); const open = $('hw-open'); const hw = $('hw');
       const lbot = $('lbot'); const mic = $('lmic-stage');
@@ -370,6 +392,9 @@ Coach the child per your rules and return ONLY the JSON. Do NOT reveal the final
     async sendAnswer(txt) {
       const msg = String(txt || '').trim();
       if (!msg) return;
+      // If a voice capture is still open (child tapped send mid-listen), close it
+      // without letting its onend re-submit the same answer.
+      if (this.micActive) { this._suppressMicSend = true; this._stopMic(); }
       // Pre-model input filter — never echo or send inappropriate words.
       if (typeof Safety !== 'undefined' && !Safety.checkInput(msg).allowed) {
         if (typeof Logger !== 'undefined') Logger.warn('safety.input_filtered', { path: 'homework' });
@@ -425,6 +450,66 @@ Coach the child per your rules and return ONLY the JSON. Do NOT reveal the final
         if (typeof reportError === 'function') reportError('homework', err.message, 'coach');
         if (typeof addBub === 'function') addBub('ai', "Hmm, I had a hiccup! Try telling me again. 🐙", {}, 'hw-chat');
       }
+    },
+
+    // Tap-to-speak: capture ONE spoken answer via Web Speech, mirror the interim
+    // transcript into the answer box, and on end route it through sendAnswer (same
+    // path as typing → the answer-withholding gate is unchanged). Single-utterance,
+    // no countdown auto-restart — that avoids the multi-beep bug the recognizer had.
+    async toggleMic() {
+      if (this.micActive) { this._stopMic(); return; }
+      const SR = _getSR();
+      if (!SR) {
+        if (typeof showToast === 'function') showToast("Voice isn't available here — you can type your answer! 😊");
+        return;
+      }
+      try { await _ensureMicPermission(); }
+      catch (_e) {
+        if (typeof showToast === 'function') showToast('I need permission to hear you — you can type instead! 😊');
+        return;
+      }
+      // Stop Ollie's voice so the mic doesn't hear the TTS.
+      if (typeof stopAll === 'function') { try { stopAll(); } catch (_e2) { /* ignore */ } }
+      const inp = $('linp');
+      let recog;
+      try { recog = new SR(); } catch (_e) { return; }
+      this._micText = '';
+      this._suppressMicSend = false;
+      recog.lang = 'en-US';
+      recog.interimResults = true;
+      recog.continuous = false;   // one answer at a time — no auto-restart
+      recog.onresult = (e) => {
+        let combined = '';
+        for (let i = 0; i < e.results.length; i++) combined += e.results[i][0].transcript;
+        this._micText = combined;
+        if (inp) inp.value = combined;   // live feedback in the answer box
+      };
+      recog.onerror = (ev) => {
+        this._finishMic();
+        if (inp) inp.value = '';
+        if (ev && ev.error === 'no-speech' && typeof showToast === 'function') {
+          showToast("I didn't catch that — tap 🎤 and try again!");
+        }
+      };
+      recog.onend = () => {
+        const send = !this._suppressMicSend;
+        const text = (this._micText || '').trim();
+        this._finishMic();
+        if (inp) inp.value = '';
+        if (send && text) this.sendAnswer(text);
+      };
+      this._recog = recog;
+      this.micActive = true;
+      if (typeof micUI === 'function') micUI('hw-mic', true);
+      try { recog.start(); } catch (_e) { this._finishMic(); }
+    },
+
+    _stopMic() { if (this._recog) { try { this._recog.stop(); } catch (_e) { /* already stopped */ } } },
+
+    _finishMic() {
+      this.micActive = false;
+      this._recog = null;
+      if (typeof micUI === 'function') micUI('hw-mic', false);
     },
 
     _logActivity() {
