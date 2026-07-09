@@ -40,4 +40,14 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+
+    <!-- Camera visibility (Android 11+ package visibility). Lets Homework Helper's
+         photo <input type=file accept=image/* capture> resolve the camera app for
+         ACTION_IMAGE_CAPTURE. Without this, resolveActivity() is filtered (AppsFilter
+         BLOCKED) and Capacitor silently falls back to the gallery picker. -->
+    <queries>
+        <intent>
+            <action android:name="android.media.action.IMAGE_CAPTURE" />
+        </intent>
+    </queries>
 </manifest>

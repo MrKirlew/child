@@ -112,6 +112,44 @@ describe('system prompts enforce the core rule (regression guard)', () => {
   });
 });
 
+describe('callGenerate — transient-failure retry (the "hiccup" hardening)', () => {
+  afterEach(() => { delete globalThis.fetch; delete globalThis.AI_PROXY; vi.restoreAllMocks(); });
+
+  const okResp = () => ({ ok: true, status: 200, json: async () => ({ candidates: [{ content: { parts: [{ text: 'ANSWER' }] } }] }) });
+  const errResp = (status, body) => ({ ok: false, status, json: async () => body });
+
+  it('retries a transient 503 and succeeds on the next attempt', async () => {
+    globalThis.AI_PROXY = 'https://x.test/api';
+    let n = 0;
+    globalThis.fetch = vi.fn(async () => { n += 1; return n === 1 ? errResp(503, { error: 'All models unavailable' }) : okResp(); });
+    const res = await HW.callGenerate({ feature: 'homework' });
+    expect(res.text).toBe('ANSWER');
+    expect(globalThis.fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('does NOT retry premium_required — returns the upgrade signal immediately', async () => {
+    globalThis.AI_PROXY = 'https://x.test/api';
+    globalThis.fetch = vi.fn(async () => errResp(402, { error: 'premium_required' }));
+    const res = await HW.callGenerate({ feature: 'homework' });
+    expect(res).toEqual({ premium: true });
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('does NOT retry a 4xx and throws with the HTTP status + server reason', async () => {
+    globalThis.AI_PROXY = 'https://x.test/api';
+    globalThis.fetch = vi.fn(async () => errResp(400, { error: { message: 'bad request' } }));
+    await expect(HW.callGenerate({})).rejects.toThrow(/http-400: bad request/);
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('gives up after 3 attempts on persistent 5xx and throws the last reason', async () => {
+    globalThis.AI_PROXY = 'https://x.test/api';
+    globalThis.fetch = vi.fn(async () => errResp(503, { error: 'All models unavailable' }));
+    await expect(HW.callGenerate({})).rejects.toThrow(/http-503: All models unavailable/);
+    expect(globalThis.fetch).toHaveBeenCalledTimes(3);
+  });
+});
+
 describe('voice answers (Web Speech STT)', () => {
   it('toggleMic is a safe no-op when speech recognition is unavailable', async () => {
     globalThis.window = {}; // no SpeechRecognition, no Capacitor
