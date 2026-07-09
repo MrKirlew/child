@@ -437,24 +437,11 @@ async function speak(txt) {
     }));
     return;
   }
-  // Gemini REST TTS only — no robotic fallback
-  const clean = txt.replace(/[*_~`#]/g, '').substring(0, 800);
-  VIZ.start();
-  for (let attempt = 0; attempt < 2; attempt++) {
-    try {
-      const r = await fetch(window.AI_PROXY + '/ai/speak', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: clean, voice: 'Kore' })
-      });
-      if (r.ok) {
-        const d = await r.json();
-        if (d.audio) { await _playPCMSingle(d.audio); return; }
-      }
-    } catch (_e) { /* retry */ }
-    if (attempt === 0) await new Promise(r => setTimeout(r, 500));
-  }
-  // TTS failed — show text only, no robotic voice
-  VIZ.stop();
+  // REST TTS: delegate to the chunked path. A single /ai/speak request is capped
+  // at ~500 audio tokens (~20s), so longer Learn/Homework replies were truncated
+  // mid-sentence ("won't say the whole thing"). speakDirect() splits per sentence
+  // and pipelines the chunks, so the entire reply is spoken.
+  return speakDirect(txt);
 }
 
 // Decode base64 PCM to Float32 with edge smoothing
@@ -468,16 +455,6 @@ function _decodePCM(base64) {
   const fade = Math.min(48, float.length >> 1);
   for (let i = 0; i < fade; i++) { float[i] *= i / fade; float[float.length - 1 - i] *= i / fade; }
   return float;
-}
-
-async function _playPCMSingle(base64) {
-  const ctx = getAudioCtx(); if (ctx.state === 'suspended') await ctx.resume();
-  const float = _decodePCM(base64);
-  const ab = ctx.createBuffer(1, float.length, 24000);
-  ab.getChannelData(0).set(float);
-  const src = ctx.createBufferSource(); src.buffer = ab; src.connect(ctx.destination);
-  src.onended = () => VIZ.stop();
-  src.start();
 }
 
 // Play PCM chunk — returns Promise, does NOT touch VIZ (caller manages visualizer)

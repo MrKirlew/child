@@ -2,7 +2,7 @@
 // network-first for /api/* (so the kid always gets fresh AI responses).
 // Bump CACHE_NAME on each release to invalidate stale shells.
 
-const CACHE_NAME = 'ollie-shell-v4';
+const CACHE_NAME = 'ollie-shell-v5';
 const SHELL = [
   '/',
   '/index.html',
