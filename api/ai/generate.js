@@ -2,10 +2,15 @@ const { withSentry } = require('../_observability');
 const Safety = require('../../www/js/safety.js');
 const { getSession, readSub, isActive } = require('../_auth');
 
-// Text generation models — native audio models don't support text output
-// Live audio (gemini-3.1-flash-live-preview) is used via Live API WebSocket only
+// Text generation models — native audio models don't support text output.
+// Live audio (gemini-3.1-flash-live-preview) is used via Live API WebSocket only.
+// FALLBACK must be a LIVE model: gemini-2.0-flash was retired by Google on
+// 2026-06-01, so the old fallback could never succeed — a transient primary blip
+// then dead-ended as "All models unavailable" (the Homework Helper "hiccup").
+// ⚠️ Both models below (the whole 2.5 line) retire 2026-10-16 — migrate PRIMARY
+// and FALLBACK to the 3.x tier (e.g. gemini-3.5-flash) before then.
 const PRIMARY = 'gemini-2.5-flash';
-const FALLBACK = 'gemini-2.0-flash';
+const FALLBACK = 'gemini-2.5-flash-lite';
 const API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
 
 // Child-safe content filtering — block at lowest threshold.
@@ -89,8 +94,13 @@ const handler = async (req, res) => {
         result.data._meta = { model: PRIMARY, attempt };
         return res.json(result.data);
       }
-      if (result.status === 503 || result.status === 429) {
-        await new Promise(r => setTimeout(r, 1000 * Math.pow(2, attempt)));
+      // Retry the primary on transient upstream failures (429/500/503), then
+      // fall through to FALLBACK below. A 4xx (bad request, safety, 402) is NOT
+      // retried — the fallback would reject it identically — so it passes
+      // straight through. Skip the backoff on the last attempt (we go to the
+      // fallback next anyway) to stay under the 30s function budget.
+      if (result.status === 429 || result.status === 500 || result.status === 503) {
+        if (attempt < 2) await new Promise(r => setTimeout(r, 1000 * Math.pow(2, attempt)));
         continue;
       }
       return res.status(result.status).json(result.data);

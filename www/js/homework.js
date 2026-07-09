@@ -161,21 +161,47 @@ Coach the child per your rules and return ONLY the JSON. Do NOT reveal the final
   /* ── Network ─────────────────────────────────────────────────────── */
 
   // Returns { text } on success, or { blocked } / { premium } / throws on error.
+  // Retries transient upstream failures (network drop, HTTP 5xx — including the
+  // server's "All models unavailable" when a Gemini model briefly overloads)
+  // TWICE with a short backoff before giving up, so a single blip doesn't
+  // dead-end the child with a "hiccup". premium_required (→ upgrade) and safety
+  // blocks are terminal and never retried; a genuine failure throws with the
+  // HTTP status + server error so reportError → /api/errors → Sentry pinpoints it.
   async function callGenerate(body) {
     const proxy = (typeof AI_PROXY !== 'undefined' && AI_PROXY) ||
       (typeof window !== 'undefined' && window.AI_PROXY);
     if (!proxy) throw new Error('No AI proxy configured');
-    const r = await fetch(proxy + '/ai/generate', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
-    });
-    const data = await r.json().catch(() => ({}));
-    if (data && data.error === 'premium_required') return { premium: true };
-    if (data && data.blocked) return { blocked: true, reason: data.reason };
-    if (data && data.error) throw new Error(data.error.message || data.error);
-    const text = data && data.candidates && data.candidates[0] && data.candidates[0].content &&
-      data.candidates[0].content.parts && data.candidates[0].content.parts[0] &&
-      data.candidates[0].content.parts[0].text;
-    return { text: text || '' };
+    let lastErr = 'request failed';
+    for (let attempt = 0; attempt < 3; attempt++) {
+      let r;
+      try {
+        r = await fetch(proxy + '/ai/generate', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+        });
+      } catch (netErr) {
+        // Network drop / WebView connection reset — transient, retry.
+        lastErr = 'network: ' + ((netErr && netErr.message) || netErr);
+        if (attempt < 2) { await new Promise(res => setTimeout(res, 400 * (attempt + 1))); continue; }
+        throw new Error(lastErr);
+      }
+      const data = await r.json().catch(() => ({}));
+      if (data && data.error === 'premium_required') return { premium: true };
+      if (data && data.blocked) return { blocked: true, reason: data.reason };
+      if (r.ok && data && !data.error) {
+        const text = data.candidates && data.candidates[0] && data.candidates[0].content &&
+          data.candidates[0].content.parts && data.candidates[0].content.parts[0] &&
+          data.candidates[0].content.parts[0].text;
+        return { text: text || '' };
+      }
+      // Error response — capture a precise, greppable reason (status + server error).
+      const serverMsg = (data && data.error && (data.error.message || data.error)) || ('http-' + r.status);
+      lastErr = 'http-' + r.status + ': ' + serverMsg;
+      // Retry only transient upstream failures (5xx); 4xx (bad request / safety)
+      // is terminal — the server's fallback model would reject it identically.
+      if (r.status >= 500 && attempt < 2) { await new Promise(res => setTimeout(res, 400 * (attempt + 1))); continue; }
+      throw new Error(lastErr);
+    }
+    throw new Error(lastErr);
   }
 
   /* ── Image capture / compression (browser only) ──────────────────── */
@@ -530,6 +556,7 @@ Coach the child per your rules and return ONLY the JSON. Do NOT reveal the final
     module.exports = {
       HWSYS_ANALYZE, HWSYS_COACH,
       buildAnalyzePrompt, buildCoachPrompt, parseJSON, enforceGate, assembleParts, buildRequestBody,
+      callGenerate,
       MAX_PAGES
     };
   }

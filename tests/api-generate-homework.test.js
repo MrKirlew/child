@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
+import { readFileSync } from 'node:fs';
 
 // Env must be present before the handler module loads (auth store reads it lazily,
 // but we set it up front to mirror the other API tests).
@@ -110,5 +111,72 @@ describe('POST /ai/generate — Homework Helper premium gate', () => {
     expect(calls.upstash).toHaveLength(0);  // no entitlement lookup
     expect(calls.gemini).toHaveLength(1);
     expect(calls.gemini[0].safetySettings).toBeDefined();
+  });
+});
+
+// Fake Upstash (always an active subscriber, so the homework gate passes) +
+// per-model Gemini responses so we can exercise the primary→fallback path. The
+// URL carries the model id, so a '-lite' segment identifies the fallback call.
+function mkFetchModels({ primaryStatus = 200, fallbackStatus = 200 } = {}) {
+  const calls = { gemini: [] };
+  const geminiResp = (status) => ({
+    ok: status >= 200 && status < 300,
+    status,
+    json: async () => (status >= 200 && status < 300)
+      ? { candidates: [{ content: { parts: [{ text: '{"message":"ok"}' }] } }] }
+      : { error: { code: status, message: 'upstream ' + status } },
+  });
+  global.fetch = vi.fn(async (url, opts) => {
+    if (String(url).includes('generativelanguage')) {
+      const isFallback = String(url).includes('gemini-2.5-flash-lite');
+      calls.gemini.push({ model: isFallback ? 'fallback' : 'primary', body: JSON.parse(opts.body) });
+      return geminiResp(isFallback ? fallbackStatus : primaryStatus);
+    }
+    const args = JSON.parse(opts.body); const cmd = args[0], key = args[1];
+    let result = 'OK';
+    if (cmd === 'GET') {
+      if (key.startsWith('session:')) result = 'emailhash';
+      else if (key.startsWith('account:')) result = JSON.stringify({ email: 'p@e.com' });
+      else if (key.startsWith('sub:')) result = JSON.stringify({ status: 'active' });
+      else result = null;
+    }
+    return { ok: true, json: async () => ({ result }) };
+  });
+  return calls;
+}
+
+describe('POST /ai/generate — model fallback & resilience', () => {
+  afterEach(() => { vi.restoreAllMocks(); vi.useRealTimers(); });
+
+  it('recovers via the fallback model when the primary is transiently overloaded (503)', async () => {
+    vi.useFakeTimers();
+    const calls = mkFetchModels({ primaryStatus: 503, fallbackStatus: 200 });
+    const res = mockRes();
+    const p = handler(req(homeworkBody()), res);
+    await vi.runAllTimersAsync();
+    await p;
+    expect(res.statusCode).toBe(200);
+    expect(res.body._meta.fallback).toBe(true);                 // answered by the fallback
+    const models = calls.gemini.map(c => c.model);
+    expect(models.filter(m => m === 'primary')).toHaveLength(3); // primary retried 3x
+    expect(models[models.length - 1]).toBe('fallback');
+  });
+
+  it('returns 503 "All models unavailable" only when BOTH primary and fallback fail', async () => {
+    vi.useFakeTimers();
+    mkFetchModels({ primaryStatus: 503, fallbackStatus: 503 });
+    const res = mockRes();
+    const p = handler(req(homeworkBody()), res);
+    await vi.runAllTimersAsync();
+    await p;
+    expect(res.statusCode).toBe(503);
+    expect(String(res.body.error)).toMatch(/All models unavailable/);
+  });
+
+  it('never assigns a Google-retired model id to PRIMARY/FALLBACK', () => {
+    const src = readFileSync(new URL('../api/ai/generate.js', import.meta.url), 'utf8');
+    expect(src).not.toMatch(/=\s*'gemini-2\.0-flash'/);          // retired 2026-06-01
+    expect(src).toMatch(/const PRIMARY\s*=\s*'gemini-2\.5-flash'/);
+    expect(src).toMatch(/const FALLBACK\s*=\s*'gemini-2\.5-flash-lite'/);
   });
 });
